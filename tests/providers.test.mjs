@@ -112,3 +112,23 @@ test('API: DEMO works offline, bad input is rejected', async () => {
   assert.equal((await handleApi(new URL('http://x/api/company?symbol=%3Cscript%3E'), {})).status, 400);
   assert.equal((await handleApi(new URL('http://x/api/nope'), {})).status, 404);
 });
+
+test('SEC: international filers (IFRS tags, EUR) and derived lines', async () => {
+  const { completeRows } = await import('../server/normalize.mjs');
+  const f = (val) => ({ start: '2022-01-01', end: '2022-12-31', val, filed: '2023-03-01', form: '20-F' });
+  const i = (val) => ({ end: '2022-12-31', val, filed: '2023-03-01', form: '20-F' });
+  const r = parseCompanyFacts({ facts: { 'ifrs-full': {
+    Revenue: { units: { EUR: [f(1000)] } }, CostOfSales: { units: { EUR: [f(600)] } },
+    ProfitLossFromOperatingActivities: { units: { EUR: [f(150)] } }, ProfitLossBeforeTax: { units: { EUR: [f(140)] } },
+    ProfitLossAttributableToOwnersOfParent: { units: { EUR: [f(100)] } }, Assets: { units: { EUR: [i(2000)] } },
+    Liabilities: { units: { EUR: [i(1200)] } }, CashFlowsFromUsedInOperatingActivities: { units: { EUR: [f(180)] } },
+    CashFlowsFromUsedInInvestingActivities: { units: { EUR: [f(-80)] } }, CashFlowsFromUsedInFinancingActivities: { units: { EUR: [f(-50)] } },
+  } } });
+  assert.equal(r.currency, 'EUR');
+  const c = completeRows({ income: r.income, balance: r.balance, cashflow: r.cashflow });
+  assert.equal(c.income[0].grossProfit, 400);
+  assert.equal(c.income[0].operatingExpenses, 250);
+  assert.equal(c.income[0].incomeTax, 40);
+  assert.equal(c.balance[0].totalEquity, 800);
+  assert.equal(c.cashflow[0].netChangeInCash, 50);
+});

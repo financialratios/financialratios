@@ -27,10 +27,16 @@ export function completeRows(company) {
     if (r.grossProfit == null && r.revenue != null && r.costOfRevenue != null) r.grossProfit = r.revenue - r.costOfRevenue;
     if (r.costOfRevenue == null && r.revenue != null && r.grossProfit != null) r.costOfRevenue = r.revenue - r.grossProfit;
     if (r.ebitda == null && r.operatingIncome != null && r.depreciationAmortization != null) r.ebitda = r.operatingIncome + r.depreciationAmortization;
+    if (r.operatingExpenses == null && r.grossProfit != null && r.operatingIncome != null) r.operatingExpenses = r.grossProfit - r.operatingIncome;
+    if (r.pretaxIncome == null && r.netIncome != null && r.incomeTax != null) r.pretaxIncome = r.netIncome + r.incomeTax;
+    if (r.incomeTax == null && r.pretaxIncome != null && r.netIncome != null) r.incomeTax = r.pretaxIncome - r.netIncome;
+    if (r.epsDiluted == null && r.netIncome != null && r.sharesDiluted) r.epsDiluted = r.netIncome / r.sharesDiluted;
+    if (r.eps == null && r.epsDiluted != null) r.eps = r.epsDiluted;
   }
   for (const r of company.balance) {
     if (r.totalDebt == null && (r.shortTermDebt != null || r.longTermDebt != null)) r.totalDebt = (r.shortTermDebt || 0) + (r.longTermDebt || 0);
     if (r.totalLiabilities == null && r.totalAssets != null && r.totalEquity != null) r.totalLiabilities = r.totalAssets - r.totalEquity;
+    if (r.totalEquity == null && r.totalAssets != null && r.totalLiabilities != null) r.totalEquity = r.totalAssets - r.totalLiabilities;
   }
   const incomeByYear = new Map(company.income.map((r) => [r.fiscalYear, r]));
   for (const r of company.cashflow) {
@@ -42,6 +48,9 @@ export function completeRows(company) {
         inc.depreciationAmortization = r.depreciationAmortization;
         if (inc.ebitda == null && inc.operatingIncome != null) inc.ebitda = inc.operatingIncome + r.depreciationAmortization;
       }
+    }
+    if (r.netChangeInCash == null && r.operatingCashFlow != null && r.investingCashFlow != null && r.financingCashFlow != null) {
+      r.netChangeInCash = r.operatingCashFlow + r.investingCashFlow + r.financingCashFlow;
     }
     if (r.freeCashFlow == null && r.operatingCashFlow != null && r.capitalExpenditure != null) {
       r.freeCashFlow = r.operatingCashFlow - Math.abs(r.capitalExpenditure);

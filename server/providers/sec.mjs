@@ -8,58 +8,71 @@ const ANNUAL_FORMS = new Set(['10-K', '10-K/A', '20-F', '20-F/A', '40-F', '40-F/
 
 // For each normalized field: the XBRL tags to try, in order of preference.
 const DURATION_TAGS = {
-  revenue: ['RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerIncludingAssessedTax', 'SalesRevenueGoodsNet', 'RevenuesNetOfInterestExpense'],
-  costOfRevenue: ['CostOfRevenue', 'CostOfGoodsAndServicesSold', 'CostOfGoodsSold', 'CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization'],
+  revenue: ['RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerIncludingAssessedTax', 'SalesRevenueGoodsNet', 'RevenuesNetOfInterestExpense', 'Revenue'],
+  costOfRevenue: ['CostOfRevenue', 'CostOfGoodsAndServicesSold', 'CostOfGoodsSold', 'CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization', 'CostOfSales', 'CostOfGoodsAndServicesSoldExcludingDepreciationDepletionAndAmortization'],
   grossProfit: ['GrossProfit'],
   researchAndDevelopment: ['ResearchAndDevelopmentExpense', 'ResearchAndDevelopmentExpenseExcludingAcquiredInProcessCost'],
   sellingGeneralAdmin: ['SellingGeneralAndAdministrativeExpense'],
+  sellingMarketing: ['SellingAndMarketingExpense', 'SellingExpense', 'MarketingExpense'],
+  generalAdmin: ['GeneralAndAdministrativeExpense', 'AdministrativeExpense'],
   operatingExpenses: ['OperatingExpenses', 'CostsAndExpenses'],
-  operatingIncome: ['OperatingIncomeLoss'],
-  interestExpense: ['InterestExpense', 'InterestExpenseNonoperating', 'InterestExpenseDebt', 'InterestPaidNet'],
-  pretaxIncome: ['IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest', 'IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments', 'IncomeLossFromContinuingOperationsBeforeIncomeTaxesDomestic'],
-  incomeTax: ['IncomeTaxExpenseBenefit'],
-  netIncome: ['NetIncomeLoss', 'ProfitLoss', 'NetIncomeLossAvailableToCommonStockholdersBasic'],
-  depreciationAmortization: ['DepreciationDepletionAndAmortization', 'DepreciationAmortizationAndAccretionNet', 'DepreciationAndAmortization', 'Depreciation'],
-  eps: ['EarningsPerShareBasic'],
-  epsDiluted: ['EarningsPerShareDiluted'],
-  sharesDiluted: ['WeightedAverageNumberOfDilutedSharesOutstanding'],
-  operatingCashFlow: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'],
-  capitalExpenditure: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets'],
-  investingCashFlow: ['NetCashProvidedByUsedInInvestingActivities', 'NetCashProvidedByUsedInInvestingActivitiesContinuingOperations'],
-  financingCashFlow: ['NetCashProvidedByUsedInFinancingActivities', 'NetCashProvidedByUsedInFinancingActivitiesContinuingOperations'],
-  dividendsPaid: ['PaymentsOfDividendsCommonStock', 'PaymentsOfDividends'],
-  shareBuybacks: ['PaymentsForRepurchaseOfCommonStock'],
+  operatingIncome: ['OperatingIncomeLoss', 'ProfitLossFromOperatingActivities'],
+  interestExpense: ['InterestExpense', 'InterestExpenseNonoperating', 'InterestExpenseDebt', 'InterestPaidNet', 'InterestAndDebtExpense', 'FinanceCosts'],
+  pretaxIncome: ['IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest', 'IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments', 'IncomeLossFromContinuingOperationsBeforeIncomeTaxesDomestic', 'ProfitLossBeforeTax'],
+  incomeTax: ['IncomeTaxExpenseBenefit', 'IncomeTaxExpenseContinuingOperations'],
+  netIncome: ['NetIncomeLoss', 'ProfitLoss', 'NetIncomeLossAvailableToCommonStockholdersBasic', 'ProfitLossAttributableToOwnersOfParent'],
+  depreciationAmortization: ['DepreciationDepletionAndAmortization', 'DepreciationAmortizationAndAccretionNet', 'DepreciationAndAmortization', 'Depreciation', 'DepreciationAndAmortisationExpense', 'DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss'],
+  eps: ['EarningsPerShareBasic', 'BasicEarningsLossPerShare'],
+  epsDiluted: ['EarningsPerShareDiluted', 'DilutedEarningsLossPerShare'],
+  sharesDiluted: ['WeightedAverageNumberOfDilutedSharesOutstanding', 'AdjustedWeightedAverageShares', 'WeightedAverageNumberOfSharesOutstandingBasic', 'WeightedAverageShares'],
+  operatingCashFlow: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations', 'CashFlowsFromUsedInOperatingActivities'],
+  capitalExpenditure: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets', 'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities', 'PaymentsToAcquireOtherPropertyPlantAndEquipment'],
+  investingCashFlow: ['NetCashProvidedByUsedInInvestingActivities', 'NetCashProvidedByUsedInInvestingActivitiesContinuingOperations', 'CashFlowsFromUsedInInvestingActivities'],
+  financingCashFlow: ['NetCashProvidedByUsedInFinancingActivities', 'NetCashProvidedByUsedInFinancingActivitiesContinuingOperations', 'CashFlowsFromUsedInFinancingActivities'],
+  dividendsPaid: ['PaymentsOfDividendsCommonStock', 'PaymentsOfDividends', 'DividendsPaidClassifiedAsFinancingActivities', 'PaymentsOfOrdinaryDividends'],
+  shareBuybacks: ['PaymentsForRepurchaseOfCommonStock', 'PaymentsForRepurchaseOfEquity', 'PaymentsToAcquireOrRedeemEntitysShares'],
   stockBasedCompensation: ['ShareBasedCompensation', 'AllocatedShareBasedCompensationExpense'],
-  netChangeInCash: ['CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsPeriodIncreaseDecreaseIncludingExchangeRateEffect', 'CashAndCashEquivalentsPeriodIncreaseDecrease'],
+  netChangeInCash: ['CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsPeriodIncreaseDecreaseIncludingExchangeRateEffect', 'CashAndCashEquivalentsPeriodIncreaseDecrease', 'IncreaseDecreaseInCashAndCashEquivalents'],
 };
 
 const INSTANT_TAGS = {
-  cash: ['CashAndCashEquivalentsAtCarryingValue', 'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents', 'Cash'],
-  shortTermInvestments: ['MarketableSecuritiesCurrent', 'ShortTermInvestments', 'AvailableForSaleSecuritiesDebtSecuritiesCurrent'],
-  receivables: ['AccountsReceivableNetCurrent', 'ReceivablesNetCurrent'],
-  inventory: ['InventoryNet'],
-  totalCurrentAssets: ['AssetsCurrent'],
-  propertyPlantEquipment: ['PropertyPlantAndEquipmentNet', 'PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization'],
+  cash: ['CashAndCashEquivalentsAtCarryingValue', 'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents', 'Cash', 'CashAndCashEquivalents'],
+  shortTermInvestments: ['MarketableSecuritiesCurrent', 'ShortTermInvestments', 'AvailableForSaleSecuritiesDebtSecuritiesCurrent', 'AvailableForSaleSecuritiesCurrent', 'CurrentFinancialAssetsAtFairValueThroughProfitOrLoss'],
+  receivables: ['AccountsReceivableNetCurrent', 'ReceivablesNetCurrent', 'AccountsNotesAndLoansReceivableNetCurrent', 'TradeAndOtherCurrentReceivables'],
+  inventory: ['InventoryNet', 'Inventories', 'InventoryGross'],
+  totalCurrentAssets: ['AssetsCurrent', 'CurrentAssets'],
+  propertyPlantEquipment: ['PropertyPlantAndEquipmentNet', 'PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization', 'PropertyPlantAndEquipment'],
   goodwill: ['Goodwill'],
-  intangibles: ['IntangibleAssetsNetExcludingGoodwill', 'FiniteLivedIntangibleAssetsNet'],
+  intangibles: ['IntangibleAssetsNetExcludingGoodwill', 'FiniteLivedIntangibleAssetsNet', 'IntangibleAssetsOtherThanGoodwill', 'IndefiniteLivedIntangibleAssetsExcludingGoodwill'],
   totalAssets: ['Assets'],
-  accountsPayable: ['AccountsPayableCurrent', 'AccountsPayableAndAccruedLiabilitiesCurrent'],
+  accountsPayable: ['AccountsPayableCurrent', 'AccountsPayableAndAccruedLiabilitiesCurrent', 'TradeAndOtherCurrentPayables'],
   shortTermDebt: ['LongTermDebtCurrent', 'DebtCurrent', 'LongTermDebtAndCapitalLeaseObligationsCurrent'],
-  commercialPaper: ['CommercialPaper', 'ShortTermBorrowings'],
-  totalCurrentLiabilities: ['LiabilitiesCurrent'],
-  longTermDebt: ['LongTermDebtNoncurrent', 'LongTermDebtAndCapitalLeaseObligations', 'LongTermDebt'],
+  commercialPaper: ['CommercialPaper', 'ShortTermBorrowings', 'CurrentPortionOfLongtermBorrowings', 'ShorttermBorrowings'],
+  totalCurrentLiabilities: ['LiabilitiesCurrent', 'CurrentLiabilities'],
+  longTermDebt: ['LongTermDebtNoncurrent', 'LongTermDebtAndCapitalLeaseObligations', 'LongTermDebt', 'LongTermNotesPayable', 'NoncurrentPortionOfNoncurrentBorrowings', 'LongtermBorrowings'],
   totalLiabilities: ['Liabilities'],
-  totalEquity: ['StockholdersEquity', 'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest'],
+  totalEquity: ['StockholdersEquity', 'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest', 'EquityAttributableToOwnersOfParent', 'Equity'],
 };
 
 const DAY = 86400000;
+const sumOrNull = (...xs) => (xs.every((x) => x == null) ? null : xs.reduce((a, x) => a + (x || 0), 0));
+
+/** Currency of the reported numbers (USD for US filers; EUR, JPY... for some foreign filers). */
+function reportingCurrency(facts) {
+  for (const tag of DURATION_TAGS.revenue.concat(DURATION_TAGS.netIncome)) {
+    const node = facts['us-gaap']?.[tag] || facts['ifrs-full']?.[tag];
+    const unit = node && Object.keys(node.units || {})[0];
+    if (unit && /^[A-Z]{3}$/.test(unit)) return unit;
+  }
+  return 'USD';
+}
 const days = (a, b) => (Date.parse(b) - Date.parse(a)) / DAY;
 
 /** All annual facts for one tag, as Map(endDate -> value), latest filing wins (restatements). */
 function annualSeries(facts, tag, { instant }) {
   const node = facts['us-gaap']?.[tag] || facts['ifrs-full']?.[tag];
   if (!node) return null;
-  const unitKey = Object.keys(node.units || {}).find((u) => u === 'USD' || u === 'USD/shares' || u === 'shares')
+  const unitKey = Object.keys(node.units || {}).find((u) => /^[A-Z]{3}(\/shares)?$/.test(u) || u === 'shares')
     || Object.keys(node.units || {})[0];
   if (!unitKey) return null;
   const out = new Map();
@@ -111,7 +124,7 @@ export function parseCompanyFacts(json) {
     income.push({
       fiscalYear, date: end,
       revenue: d('revenue'), costOfRevenue: d('costOfRevenue'), grossProfit: d('grossProfit'),
-      researchAndDevelopment: d('researchAndDevelopment'), sellingGeneralAdmin: d('sellingGeneralAdmin'),
+      researchAndDevelopment: d('researchAndDevelopment'), sellingGeneralAdmin: d('sellingGeneralAdmin') ?? sumOrNull(d('sellingMarketing'), d('generalAdmin')),
       operatingExpenses: d('operatingExpenses'), operatingIncome: d('operatingIncome'),
       interestExpense: d('interestExpense'), pretaxIncome: d('pretaxIncome'), incomeTax: d('incomeTax'),
       netIncome: d('netIncome'), depreciationAmortization: d('depreciationAmortization'), ebitda: null,
@@ -146,7 +159,7 @@ export function parseCompanyFacts(json) {
   const sharesFacts = facts.dei?.EntityCommonStockSharesOutstanding?.units?.shares || [];
   const latestShares = [...sharesFacts].sort((a, b) => String(b.end).localeCompare(String(a.end)))[0];
 
-  return { name: json.entityName, income, balance, cashflow, sharesOutstanding: latestShares?.val ?? null };
+  return { name: json.entityName, currency: reportingCurrency(facts), income, balance, cashflow, sharesOutstanding: latestShares?.val ?? null };
 }
 
 let tickerCache = null;
@@ -199,7 +212,7 @@ export async function secCompany(symbol, ua, fetchImpl = fetch) {
       symbol: hit.symbol,
       name: subs.name || parsed.name || hit.name,
       exchange: (subs.exchanges || [])[0] || '',
-      currency: 'USD',
+      currency: parsed.currency,
       sector: '',
       industry: subs.sicDescription || '',
       description: '',
