@@ -234,7 +234,7 @@ function render(c) {
 
   <section class="az-section" id="ratios">
     <h2>Ratios over ${c.income.length} years</h2>
-    <p class="muted small">Newest year first. What each ratio means is written under its name and explained in the <a href="/learn/ratios.html">ratios lesson</a>.</p>
+    <p class="muted small">What each ratio means is written under its name and explained in the <a href="/learn/ratios.html">ratios lesson</a>.</p>
     <div class="grid grid-2">
       <div class="card"><h3 style="margin-top:0">Profit margins</h3><div class="chart-box short"><canvas id="c-margins"></canvas></div></div>
       <div class="card"><h3 style="margin-top:0">Returns on capital</h3><div class="chart-box short"><canvas id="c-returns"></canvas></div></div>
@@ -299,6 +299,8 @@ function render(c) {
     renderStatement(b.dataset.st);
   }));
   renderRatioCharts(c, ratios);
+  // Tables keep oldest → newest order but open scrolled to the latest years on small screens.
+  $$('.ratio-table').forEach((el) => { el.scrollLeft = el.scrollWidth; });
   renderDcf(c, hist, val);
 }
 
@@ -428,6 +430,7 @@ function renderStatement(kind) {
   const cell = (field, v) => (perShare.has(field) ? (isNum(v) ? plain(v) : DASH) : millions(v));
   $('#st-table').innerHTML = `<table><thead><tr><th>${kind === 'income' ? 'Income statement' : kind === 'balance' ? 'Balance sheet' : 'Cash flow statement'}</th>${years.map((y) => `<th>${y}</th>`).join('')}<th style="text-align:left">→ What it is</th></tr></thead>
     <tbody>${rows.filter(([f]) => data.some((r) => isNum(r[f]))).map(([f, label, ex]) => `<tr class="${totals.has(f) ? 'total' : ''}"><td>${label}</td>${data.map((r) => `<td class="${isNum(r[f]) && r[f] < 0 ? 'neg' : ''}">${cell(f, r[f])}</td>`).join('')}<td style="text-align:left;white-space:normal;min-width:240px;color:var(--ink-2);font-size:.85rem">${ex}</td></tr>`).join('')}</tbody></table>`;
+  $('#st-table').scrollLeft = 0;
 
   const m = (k) => data.map((r) => (isNum(r[k]) ? r[k] : null));
   const fmt = (v) => compact(v, cur);
@@ -460,8 +463,7 @@ function renderStatement(kind) {
 // ---------- Ratios ----------
 function fmtRatio(v, f) { return f === 'pct' ? pct(v) : f === 'x1' ? times(v) : times(v, 2); }
 function ratioTable(ratios) {
-  // Newest year first (like Yahoo Finance), so the latest numbers are visible without scrolling.
-  const rows = [...ratios].reverse();
+  const rows = ratios; // oldest to newest
   const cols = rows.length + 2;
   const cell = (v, f) => (isNum(v) ? fmtRatio(v, f) : '<span class="na" title="Not reported, or not meaningful (e.g. negative profit or equity)">—</span>');
   return `<table class="rt"><thead><tr><th>Ratio</th>${rows.map((y) => `<th>FY${y.fiscalYear}</th>`).join('')}<th>Average</th></tr></thead><tbody>

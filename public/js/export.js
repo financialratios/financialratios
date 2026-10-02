@@ -1,5 +1,5 @@
 // "Download" button: the three financial statements, laid out like Yahoo Finance
-// (newest year first, numbers in thousands, sections in bold with indented sub-lines),
+// (numbers in thousands, sections in bold with indented sub-lines, years from oldest to newest),
 // as an Excel workbook or a PDF. Libraries load only when someone clicks.
 import { INCOME_LAYOUT, BALANCE_LAYOUT, CASHFLOW_LAYOUT, RATIO_ROWS, layoutValue } from './rows.js';
 import { yearlyRatios } from './lib/finance.js';
@@ -29,7 +29,7 @@ const STATEMENTS = [
 
 /** Lines with at least one reported value, each with its values newest-first, scaled for display. */
 function buildTable(company, key, layout) {
-  const years = [...company[key]].reverse();
+  const years = company[key]; // oldest year first, newest on the right
   const lines = [];
   for (const line of layout) {
     if (line.spacer) { lines.push({ spacer: true }); continue; }
@@ -67,7 +67,7 @@ export async function downloadExcel(company) {
     const ws = wb.addWorksheet(title, { views: [{ state: 'frozen', xSplit: 1, ySplit: 5 }] });
     ws.columns = [{ width: 52 }, ...years.map(() => ({ width: 15 }))];
     ws.addRow([`${profile.name} (${profile.symbol}) — ${title}`]).font = { bold: true, size: 14, color: { argb: DARK } };
-    ws.addRow([`All numbers in thousands of ${cur}, except per-share data. Fiscal years, newest first.`]).font = { italic: true, color: { argb: 'FF66738A' } };
+    ws.addRow([`All numbers in thousands of ${cur}, except per-share data. Fiscal years, oldest to newest.`]).font = { italic: true, color: { argb: 'FF66738A' } };
     ws.addRow([`Source: ${company.source} · Downloaded from Financial Rat on ${today()} · For education only; check the company's official filings.`]).font = { size: 9, color: { argb: 'FF66738A' } };
     const h1 = ws.addRow(['Breakdown', ...years.map((r) => `FY${r.fiscalYear}`)]);
     const h2 = ws.addRow(['', ...years.map((r) => usDate(r.date))]);
@@ -91,8 +91,8 @@ export async function downloadExcel(company) {
     }
   }
 
-  // Ratios, newest first.
-  const ratios = [...yearlyRatios(company)].reverse();
+  // Ratios, oldest to newest.
+  const ratios = yearlyRatios(company);
   const rs = wb.addWorksheet('Ratios', { views: [{ state: 'frozen', xSplit: 1, ySplit: 3 }] });
   rs.columns = [{ width: 40 }, ...ratios.map(() => ({ width: 12 }))];
   rs.addRow([`${profile.name} (${profile.symbol}) — Financial ratios (calculated by Financial Rat)`]).font = { bold: true, size: 14 };
@@ -146,7 +146,7 @@ export async function downloadPdf(company) {
     doc.text(pdfSafe(`${profile.name} (${profile.symbol})`), 36, 28);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
-    doc.text(pdfSafe(`All numbers in thousands of ${cur}, except per-share data · Newest year first · Source: ${company.source} · ${today()}`), 36, 46);
+    doc.text(pdfSafe(`All numbers in thousands of ${cur}, except per-share data · Oldest to newest year · Source: ${company.source} · ${today()}`), 36, 46);
     doc.setTextColor(245, 184, 61);
     doc.setFont('helvetica', 'bold');
     doc.text('Financial Rat - Finance For All, All For Finance', W - 36, 28, { align: 'right' });
