@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Valuation explained: P/E, EV/EBITDA and DCF step by step — Financial Rat</title>
+  <meta name="description" content="Learn how to value a company: P/E ratio, enterprise value, EV/EBITDA, price-to-book, free cash flow yield and a discounted cash flow (DCF) model built step by step.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-lesson="valuation">
+<div id="site-header"></div>
+<main id="main" class="container lesson-layout">
+  <aside class="lesson-nav" id="lesson-nav" aria-label="Lessons"></aside>
+  <article class="lesson">
+    <span class="eyebrow">Lesson 5 · Valuation</span>
+    <h1>What is a company worth?</h1>
+    <p class="intro">The <b>price</b> is what you pay for a share; the <b>value</b> is what the business is worth to you.
+      There are two families of tools: <b>multiples</b> (quick comparisons) and the <b>DCF</b> (a full model of future cash).</p>
+
+    <div class="callout grandpa"><span class="t">👴 In one sentence</span>
+      A business is worth all the cash it will ever give its owners — and a dollar far in the future is worth less than a dollar today.</div>
+
+    <p>Imagine the founders of Rat Bakery offer to sell you shares at <b>$90 per share</b>. With 10,000 shares, the whole bakery
+      is priced at <b>$900,000</b>. This is its <b>market capitalisation</b> (market cap) = price × number of shares.</p>
+
+    <h2>Part 1 — Multiples</h2>
+    <div class="statement">
+      <div class="st-title">Valuation multiples <small>Rat Bakery at $90 per share</small></div>
+      <div class="arow key"><div class="line"><span>P/E = 90 ÷ 7.20</span><span class="v">12.5x</span></div><div class="arrow"></div>
+        <div class="note"><b>Price-to-earnings</b>: you pay $12.50 for each $1 of yearly profit. If profit never changed, you'd need 12.5 years to "earn back" the price.</div></div>
+      <div class="arow"><div class="line"><span>Earnings yield = 7.20 ÷ 90</span><span class="v">8.0%</span></div><div class="arrow"></div>
+        <div class="note">The P/E turned upside down. Easy to compare with a savings account or bond yield.</div></div>
+      <div class="arow"><div class="line"><span>P/S = 900,000 ÷ 500,000</span><span class="v">1.8x</span></div><div class="arrow"></div>
+        <div class="note"><b>Price-to-sales</b>. Useful for young companies that don't make a profit yet.</div></div>
+      <div class="arow"><div class="line"><span>P/B = 900,000 ÷ 175,000</span><span class="v">5.1x</span></div><div class="arrow"></div>
+        <div class="note"><b>Price-to-book</b>: price vs. equity on the balance sheet. Most used for banks and insurers.</div></div>
+      <div class="arow total"><div class="line"><span>Enterprise value = 900,000 + 100,000 − 60,000</span><span class="v">940,000</span></div><div class="arrow"></div>
+        <div class="note"><b>EV</b> = market cap + debt − cash. The price to buy the <b>whole business</b>, including taking over its debts and keeping its cash.</div></div>
+      <div class="arow key"><div class="line"><span>EV/EBITDA = 940,000 ÷ 130,000</span><span class="v">7.2x</span></div><div class="arrow"></div>
+        <div class="note">Compares the whole-business price with operating earnings. Fair across companies with <b>different amounts of debt</b> — that's why buyers of entire companies love it.</div></div>
+      <div class="arow"><div class="line"><span>FCF yield = 58,000 ÷ 900,000</span><span class="v">6.4%</span></div><div class="arrow"></div>
+        <div class="note">Free cash flow per $1 you pay. Higher = more cash for your money.</div></div>
+      <div class="arow"><div class="line"><span>Dividend yield = 28,800 ÷ 900,000</span><span class="v">3.2%</span></div><div class="arrow"></div>
+        <div class="note">The cash you'd actually receive each year as a percentage of the price.</div></div>
+    </div>
+    <div class="callout warn"><span class="t">⚠️ A low P/E is not automatically "cheap"</span>
+      A P/E of 12.5 can be a bargain for a growing company or expensive for one whose profits are about to fall. Multiples only make sense
+      when compared with the company's own history, with similar companies, and together with growth. That's why our analysis pages show each
+      company's multiples <b>over 10 years</b> rather than a verdict.</div>
+
+    <h2>Part 2 — The discounted cash flow (DCF), step by step</h2>
+    <p>A DCF estimates value from first principles: <b>forecast the free cash flow</b>, then <b>convert future dollars into today's dollars</b>.</p>
+
+    <h3>Step 1 — Why future money is worth less</h3>
+    <p>$100 today can be invested at, say, 10% and become $110 next year. So $110 next year is worth $100 today.
+      Going backwards like this is called <b>discounting</b>, and the 10% is the <b>discount rate</b> — the yearly return you demand for taking the risk.</p>
+    <div class="formula"><span class="eq">Present value</span> = Future cash ÷ (1 + discount rate)<sup>years</sup> → 110 ÷ 1.10<sup>1</sup> = 100</div>
+
+    <h3>Step 2 — Choose your assumptions</h3>
+    <ul>
+      <li><b>Starting free cash flow:</b> $58,000 (from lesson 3).</li>
+      <li><b>Growth for the next 5 years:</b> 5% a year. (Our analysis pages start from each company's own 10-year history; you can change it.)</li>
+      <li><b>Discount rate:</b> 10%.</li>
+      <li><b>Growth forever after year 5 ("terminal growth"):</b> 2% — about the long-run growth of the economy. It must be lower than the discount rate.</li>
+    </ul>
+
+    <h3>Step 3 — Forecast and discount</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Year</th><th>Free cash flow</th><th>÷ discount factor</th><th>= value today</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>60,900</td><td>1.100</td><td>55,364</td></tr>
+        <tr><td>2</td><td>63,945</td><td>1.210</td><td>52,847</td></tr>
+        <tr><td>3</td><td>67,142</td><td>1.331</td><td>50,445</td></tr>
+        <tr><td>4</td><td>70,499</td><td>1.464</td><td>48,152</td></tr>
+        <tr><td>5</td><td>74,024</td><td>1.611</td><td>45,963</td></tr>
+        <tr class="total"><td>Sum of years 1–5</td><td></td><td></td><td>252,771</td></tr>
+      </tbody></table></div>
+
+    <h3>Step 4 — Everything after year 5: the terminal value</h3>
+    <p>The bakery won't close after 5 years. The value of all later years is estimated with one formula (the "Gordon growth" formula):</p>
+    <div class="formula"><span class="eq">Terminal value</span> = FCF<sub>year 5</sub> × (1 + g) ÷ (discount − g) = 74,024 × 1.02 ÷ 0.08 = <b>943,810</b><br>
+      Value today = 943,810 ÷ 1.611 = <b>586,032</b></div>
+
+    <h3>Step 5 — From business value to value per share</h3>
+    <div class="statement">
+      <div class="st-title">DCF result <small>Rat Bakery</small></div>
+      <div class="arow"><div class="line"><span>Years 1–5 (today's $)</span><span class="v">252,771</span></div><div class="arrow"></div>
+        <div class="note">Cash from the forecast period.</div></div>
+      <div class="arow"><div class="line"><span>Terminal value (today's $)</span><span class="v">586,032</span></div><div class="arrow"></div>
+        <div class="note">70% of the total! Most of a company's value usually lies far in the future — so small assumption changes matter a lot.</div></div>
+      <div class="arow total"><div class="line"><span>Enterprise value</span><span class="v">838,803</span></div><div class="arrow"></div>
+        <div class="note">The value of the whole business.</div></div>
+      <div class="arow minus"><div class="line"><span>− Net debt</span><span class="v">(40,000)</span></div><div class="arrow"></div>
+        <div class="note">Debt 100,000 − cash 60,000 belongs to the bank, not the owners.</div></div>
+      <div class="arow total"><div class="line"><span>Equity value</span><span class="v">798,803</span></div><div class="arrow"></div>
+        <div class="note">The value for the shareholders.</div></div>
+      <div class="arow key"><div class="line"><span>÷ 10,000 shares = value per share</span><span class="v">79.88</span></div><div class="arrow"></div>
+        <div class="note">Under <b>these</b> assumptions, the model gives $79.88 per share, about 11% below the $90 asking price.</div></div>
+    </div>
+
+    <h3>Step 6 — Sensitivity: the honest part</h3>
+    <p>Change the assumptions a little and the answer moves a lot. Value per share for different growth and discount rates:</p>
+    <div class="table-wrap"><table class="sens">
+      <thead><tr><th>Discount rate ↓ / growth →</th><th>3%</th><th>5%</th><th>7%</th></tr></thead>
+      <tbody>
+        <tr><td>9%</td><td>84.23</td><td>92.06</td><td>100.48</td></tr>
+        <tr><td>10%</td><td>73.14</td><td class="mid">79.88</td><td>87.11</td></tr>
+        <tr><td>11%</td><td>64.52</td><td>70.41</td><td>76.72</td></tr>
+      </tbody></table></div>
+    <p>The same bakery is "worth" anywhere from $65 to $100 per share depending on reasonable assumptions. A DCF doesn't give <i>the</i> answer;
+      it shows you <b>what you must believe</b> for a price to make sense. That's how we present it on every company page: the calculation, the assumptions, and the range — never a verdict.</p>
+
+    <div class="callout tip"><span class="t">💡 Try it yourself</span>
+      Use the <a href="/calculators/stock-value.html">stock value calculator</a>, or open any company in the <a href="/analyze/">analysis section</a>:
+      the DCF there starts with the company's own 10-year revenue growth, and you can move every slider.</div>
+
+    <div class="quiz"><b>✏️ Check yourself:</b> why does a higher discount rate give a lower value?
+      <details><summary>Show the answer</summary>
+        <p>Because you're demanding a higher return. To get more return from the same future cash, you must pay less for it today. Riskier businesses therefore get higher discount rates and lower values.</p>
+      </details>
+    </div>
+
+    <div class="ad-slot" data-slot="middle"></div>
+    <nav class="lesson-pager" id="lesson-pager"></nav>
+  </article>
+</main>
+<div id="site-footer"></div>
+<script type="module" src="/js/site.js"></script>
+<script type="module" src="/js/learn.js"></script>
+</body>
+</html>

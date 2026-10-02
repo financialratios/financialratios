@@ -1,0 +1,2 @@
+# Google AdSense: run `npm run set-adsense -- ca-pub-XXXXXXXXXXXXXXXX` to fill this in.
+# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0

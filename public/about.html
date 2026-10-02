@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About — Financial Rat</title>
+  <meta name="description" content="Why Financial Rat exists: finance explained simply, for everyone.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main" class="container narrow prose">
+
+  <span class="eyebrow">About us</span>
+  <h1>Finance for all, all for finance</h1>
+  <div data-motto=""></div>
+  <p style="margin-top:16px">Financial Rat was born from a simple frustration: to learn about investing you have to jump between one website for definitions,
+    another for calculators, another for company data and another for charts — each written for experts.</p>
+  <p>We put the three things you need in one place, in plain language:</p>
+  <ol>
+    <li><a href="/learn/">Learn</a> — financial statements, ratios and valuation explained from scratch, with real company examples.</li>
+    <li><a href="/calculators/">Calculators</a> — compound interest, mortgages, returns and more, each with its formula and sources.</li>
+    <li><a href="/analyze/">Analyze a company</a> — type a ticker and get its business, revenue sources, 10 years of numbers, ratios, valuation and price history.</li>
+  </ol>
+  <h2>Our promise: numbers, not opinions</h2>
+  <p>We never tell you to buy or sell. Every analysis is calculated from the company's own reported history, and every assumption is shown and adjustable.
+    You stay in charge of your decisions.</p>
+  <h2>Why a rat?</h2>
+  <p>Fin<b>ancial</b> <b>Rat</b>ios — and rats are famously clever, curious and resourceful. That's what we hope you'll feel when using the site.</p>
+  <h2 id="contact">Contact</h2>
+  <p>Ideas, corrections or partnership proposals are very welcome: <a class="contact-email" href="#">write to us</a>.</p>
+  <script type="module">import { SITE } from '/js/config.js'; document.querySelectorAll('.contact-email').forEach((a) => { a.href = 'mailto:' + SITE.contactEmail; a.textContent = SITE.contactEmail; });</script>
+
+</main>
+<div id="site-footer"></div>
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>
