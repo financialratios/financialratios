@@ -1,7 +1,7 @@
 // Section 3: type a ticker, get an objective analysis.
 // Everything shown is calculated from the company's own reported history. No ratings, no verdicts.
 import {
-  yearlyRatios, historySummary, currentValuation, historicalMultiples, dcf, average, isNum, growthSeries,
+  yearlyRatios, historySummary, currentValuation, historicalMultiples, dcf, average, isNum, growthSeries, splitAdjustedIncome, dividendHistory, cagr,
 } from './lib/finance.js';
 import { compact, money, pct, signedPct, times, plain, millions, words, escapeHtml, DASH } from './lib/format.js';
 import { barChart, lineChart, donutChart, palette } from './charts.js';
@@ -110,6 +110,7 @@ async function load(raw) {
   if (state.company !== company) return; // user searched something else meanwhile
   state.prices = prices.error ? null : prices;
   renderPrices(prices);
+  renderDividends(state.prices);
   renderMultiplesHistory();
 }
 
@@ -150,6 +151,7 @@ function render(c) {
         <div class="price">${isNum(q.price) ? money(q.price, pcur) : '<span class="muted" style="font-size:1rem">Price unavailable</span>'}</div>
         ${isNum(q.change) ? `<div class="chg ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${money(Math.abs(q.change), pcur)} (${signedPct((q.changePercent || 0) / 100, 2)}) <span class="muted small">last session</span></div>` : ''}
       </div>
+      <a class="iv-badge hidden" id="iv-badge" href="#dcf" title="See the DCF model and change its assumptions">Intrinsic value (DCF) <b></b></a>
       <div class="dl">
         <button class="btn btn-accent" id="dl-btn" aria-haspopup="true" aria-expanded="false">⬇ Download statements</button>
         <div class="dl-menu hidden" id="dl-menu">
@@ -161,9 +163,23 @@ function render(c) {
   </div>
 
   <nav class="tabs" aria-label="Analysis sections">
-    <a href="#overview" class="active">Overview</a><a href="#price">Price history</a><a href="#business">Business</a>
+    <a href="#price" class="active">Price chart</a><a href="#overview">Overview</a><a href="#pershare">EPS &amp; dividends</a><a href="#business">Business</a>
     <a href="#statements">Statements</a><a href="#ratios">Ratios</a><a href="#valuation">Valuation</a><a href="#dcf">DCF model</a>
   </nav>
+
+  <section class="az-section" id="price">
+    <div class="toolbar"><h2 style="margin:0">Price history</h2>
+      <div class="seg-btns" id="chart-type"><button data-type="candle" class="active">🕯️ Candles</button><button data-type="line">Line</button></div></div>
+    <div class="range-btns" id="range-btns" style="margin-top:12px">${['1M', '6M', '1Y', '5Y', '10Y', 'MAX'].map((r) => `<button data-r="${r}">${r === 'MAX' ? 'Since IPO' : r}</button>`).join('')}
+      <label class="check small" style="margin-left:8px"><input type="checkbox" id="log-scale"> Log scale</label></div>
+    <div class="card" style="margin-top:12px"><div class="chart-box tall" id="c-price" aria-label="Daily share price candles"><div class="spinner" id="price-spin" style="position:absolute;inset:0;margin:auto"></div></div>
+      <div class="stats" id="price-stats"></div>
+      <details class="small muted"><summary style="cursor:pointer;font-weight:700">How to read a candle 🕯️</summary>
+        <p style="margin:8px 0 0">Each candle is one trading day. The thick body runs from the <b>opening</b> price to the <b>closing</b> price:
+        <span class="up"><b>green</b></span> if the price closed higher than it opened, <span class="down"><b>red</b></span> if lower.
+        The thin lines (wicks) show the day's <b>highest</b> and <b>lowest</b> prices. The bars at the bottom show how many shares changed hands (volume).
+        Drag to move through time, scroll or pinch to zoom. Prices are adjusted for stock splits; dividends are not included.</p></details></div>
+  </section>
 
   <section class="az-section" id="overview">
     <h2>Overview</h2>
@@ -182,18 +198,13 @@ function render(c) {
     <div id="glance">${glance(c, hist, ratios, val, cur)}</div>
   </section>
 
-  <section class="az-section" id="price">
-    <div class="toolbar"><h2 style="margin:0">Price history</h2>
-      <div class="seg-btns" id="chart-type"><button data-type="candle" class="active">🕯️ Candles</button><button data-type="line">Line</button></div></div>
-    <div class="range-btns" id="range-btns" style="margin-top:12px">${['1M', '6M', '1Y', '5Y', '10Y', 'MAX'].map((r) => `<button data-r="${r}">${r === 'MAX' ? 'Since IPO' : r}</button>`).join('')}
-      <label class="check small" style="margin-left:8px"><input type="checkbox" id="log-scale"> Log scale</label></div>
-    <div class="card" style="margin-top:12px"><div class="chart-box tall" id="c-price" aria-label="Daily share price candles"><div class="spinner" id="price-spin" style="position:absolute;inset:0;margin:auto"></div></div>
-      <div class="stats" id="price-stats"></div>
-      <details class="small muted"><summary style="cursor:pointer;font-weight:700">How to read a candle 🕯️</summary>
-        <p style="margin:8px 0 0">Each candle is one trading day. The thick body runs from the <b>opening</b> price to the <b>closing</b> price:
-        <span class="up"><b>green</b></span> if the price closed higher than it opened, <span class="down"><b>red</b></span> if lower.
-        The thin lines (wicks) show the day's <b>highest</b> and <b>lowest</b> prices. The bars at the bottom show how many shares changed hands (volume).
-        Drag to move through time, scroll or pinch to zoom. Prices are adjusted for stock splits; dividends are not included.</p></details></div>
+  <section class="az-section" id="pershare">
+    <h2>Earnings &amp; dividends per share</h2>
+    <p class="muted small">What one share earned each year, and every dividend one share has received. Adjusted for stock splits so years can be compared.</p>
+    <div class="grid grid-2">
+      <div class="card"><h3 style="margin-top:0">📈 Earnings per share (EPS)</h3><div class="chart-box"><canvas id="c-eps"></canvas></div><div id="eps-text"></div></div>
+      <div class="card"><h3 style="margin-top:0">💵 Dividends per share — full history</h3><div class="chart-box" id="div-box"><canvas id="c-div"></canvas></div><div id="div-text"><p class="muted small">Loading the dividend history…</p></div></div>
+    </div>
   </section>
 
   <section class="az-section" id="business">
@@ -251,7 +262,7 @@ function render(c) {
   <section class="az-section" id="dcf">
     <h2>Discounted cash flow (DCF) model</h2>
     <p class="muted">A DCF estimates what the business could be worth from the cash it may produce. The starting assumptions come from the company's <b>own history</b>;
-      move the sliders to test your own. Built exactly like <a href="/learn/valuation.html">lesson 5</a>, with one refinement: growth fades in a straight line from year 6 to year 10 towards the long-term rate.</p>
+      move the sliders to test your own. Built like the <a href="/learn/dcf.html">DCF lesson</a>, simplified, with one refinement: growth fades in a straight line from year 6 to year 10 towards the long-term rate.</p>
     <div class="dcf-grid">
       <form class="card calc-form" id="dcf-form" onsubmit="return false"></form>
       <div id="dcf-out"></div>
@@ -265,6 +276,7 @@ function render(c) {
   wireTabs();
   renderSegments(c);
   renderStory(c);
+  renderEps(c);
   renderStatement('income');
   $$('#st-btns button').forEach((b) => b.addEventListener('click', () => {
     $$('#st-btns button').forEach((x) => x.classList.toggle('active', x === b));
@@ -593,17 +605,21 @@ function renderMultiplesHistory() {
 // ---------- DCF ----------
 function renderDcf(c, hist, val) {
   const cur = state.cur, pcur = state.pcur;
-  const lastInc = c.income[c.income.length - 1];
+  // Start from the latest year that actually reports revenue.
+  const lastInc = [...c.income].reverse().find((r) => isNum(r.revenue) && r.revenue > 0) || c.income[c.income.length - 1];
+  const g5 = hist.revenueCagr5 ?? hist.revenueCagr;
+  const m5 = hist.avgFcfMargin5 ?? hist.avgFcfMargin;
   const defaults = {
-    growth: isNum(hist.revenueCagr) ? hist.revenueCagr * 100 : 3,
-    margin: isNum(hist.avgFcfMargin) ? hist.avgFcfMargin * 100 : 5,
+    growth: isNum(g5) ? g5 * 100 : 2.5,
+    margin: isNum(m5) ? m5 * 100 : 5,
     discount: 9,
     terminal: 2.5,
   };
   const round1 = (v) => Math.round(v * 10) / 10;
   const sliders = [
-    { id: 'growth', label: 'Revenue growth, years 1–5', min: -20, max: 50, step: 0.5, why: `Default: the company's own <b>${c.income.length}-year historical average</b> (${pct(hist.revenueCagr)} a year, FY${c.income[0].fiscalYear}–FY${lastInc.fiscalYear}).` },
-    { id: 'margin', label: 'Free cash flow margin', min: -20, max: 60, step: 0.5, why: `Default: its ${c.income.length}-year average FCF ÷ revenue (${pct(hist.avgFcfMargin)}).` },
+    { id: 'growth', label: 'Revenue growth, years 1–5', min: -20, max: 60, step: 0.1, why: isNum(g5) ? `Default: the company's average growth over the <b>last ${hist.span5} years</b>: revenue went from ${compact(hist.cagr5From.value, cur)} (FY${hist.cagr5From.year}) to ${compact(hist.cagr5To.value, cur)} (FY${hist.cagr5To.year}) = <b>${pct(g5)} a year</b>.${isNum(hist.revenueCagr) && hist.span > hist.span5 ? ` Over the whole history shown (FY${hist.cagr5To.year - hist.span}–FY${hist.cagr5To.year}) it was ${pct(hist.revenueCagr)} a year.` : ''}`
+      : 'Revenue history is incomplete, so the default is 2.5% (long-run economic growth). Set your own estimate.' },
+    { id: 'margin', label: 'Free cash flow margin', min: -20, max: 60, step: 0.1, why: `Default: its average free cash flow ÷ revenue over the last 5 years (${pct(m5)}).` },
     { id: 'discount', label: 'Discount rate (return you require)', min: 4, max: 20, step: 0.25, why: 'Default 9%: close to the long-run historical return of broad stock markets. Riskier company → higher rate.' },
     { id: 'terminal', label: 'Long-term growth after year 10', min: 0, max: 5, step: 0.25, why: 'Default 2.5%: roughly long-run economic growth. Must stay below the discount rate.' },
   ];
@@ -617,7 +633,7 @@ function renderDcf(c, hist, val) {
   const shares = val.shares;
   const update = () => {
     const v = read();
-    sliders.forEach((s) => { $(`#o-${s.id}`).textContent = `${v[s.id].toFixed(s.step < 0.5 ? 2 : 1)}%`; });
+    sliders.forEach((s) => { $(`#o-${s.id}`).textContent = `${v[s.id].toFixed(s.step < 0.1 || s.step === 0.25 ? 2 : 1)}%`; });
     const run = (g, d) => {
       const r = dcf({ revenue: lastInc.revenue, growth: g / 100, fcfMargin: v.margin / 100, discount: d / 100, terminalGrowth: v.terminal / 100, netDebt: val.netDebt, shares });
       // Per-share value in the currency (and share units) the price is quoted in.
@@ -633,8 +649,9 @@ function renderDcf(c, hist, val) {
     const price = val.price;
     const diff = isNum(r.perShare) && isNum(price) && r.perShare > 0 ? price / r.perShare - 1 : null;
     out.innerHTML = `
-      <div class="answer"><div class="label">Model value per share under these assumptions</div>
+      <div class="answer iv"><div class="label">⭐ Intrinsic value per share (DCF), with these assumptions</div>
         <div class="value">${isNum(r.perShare) ? (r.perShare > 0 ? money(r.perShare, pcur) : 'Below zero') : DASH}</div>
+        ${isNum(price) ? `<div class="iv-compare"><span>Intrinsic value <b>${isNum(r.perShare) && r.perShare > 0 ? money(r.perShare, pcur) : DASH}</b></span><span>Market price <b>${money(price, pcur)}</b></span></div>` : ''}
         <p class="say">${isNum(diff) ? `The current price of ${money(price, pcur)} is <b>${pct(Math.abs(diff))} ${diff >= 0 ? 'above' : 'below'}</b> this model value. Change the assumptions to see what the price implies.` :
     r.perShare <= 0 ? 'With these assumptions the projected cash flows do not cover the company\'s net debt.' : ''}</p></div>
       <div class="stats">
@@ -656,6 +673,11 @@ function renderDcf(c, hist, val) {
         <tr class="total"><td>After ${lastInc.fiscalYear + 10}</td><td>${pct(v.terminal / 100)}</td><td></td><td>Terminal value ${compact(r.terminalValue, cur)}</td><td>${compact(r.pvTerminal, cur)}</td></tr>
         </tbody></table></div></details>
       ${arrow('The model is only as good as its assumptions. Using the company\'s history as the starting point is a neutral choice, not a forecast: the past does not guarantee the future.')}`;
+    const badge = $('#iv-badge');
+    if (badge) {
+      badge.classList.toggle('hidden', !(isNum(r.perShare) && r.perShare > 0));
+      badge.querySelector('b').textContent = isNum(r.perShare) ? money(r.perShare, pcur) : '';
+    }
     const pal = palette();
     const histYears = c.income.map((x) => `FY${x.fiscalYear}`);
     const projYears = r.rows.map((x) => `FY${lastInc.fiscalYear + x.year}`);
@@ -675,6 +697,56 @@ function renderDcf(c, hist, val) {
   update();
 }
 
+
+
+// ---------- Earnings & dividends per share ----------
+function renderEps(c) {
+  const pal = palette();
+  const inc = splitAdjustedIncome(c.income);
+  const eps = inc.map((r) => r.epsDiluted ?? r.eps);
+  const years = inc.map((r) => `FY${r.fiscalYear}`);
+  const r2 = (v) => (isNum(v) ? Math.round(v * 100) / 100 : null);
+  barChart($('#c-eps'), years, [{ label: 'EPS (diluted)', data: eps.map(r2), color: pal.series[0], colorBySign: true }],
+    { yFormat: (v) => money(Number(v), state.cur), legend: false });
+  const pts = eps.map((v, i) => [v, inc[i].fiscalYear]).filter(([v]) => isNum(v));
+  const box = $('#eps-text');
+  if (pts.length < 2) { box.innerHTML = '<p class="muted small">Not enough EPS history.</p>'; return; }
+  const [first, firstY] = pts[0], [last, lastY] = pts[pts.length - 1];
+  const g = growthSeries(eps);
+  const ups = g.filter((x) => isNum(x) && x > 0).length, downs = g.filter((x) => isNum(x) && x < 0).length;
+  const gr = first > 0 && last > 0 ? cagr(first, last, lastY - firstY) : null;
+  box.innerHTML = arrow(`EPS went from ${money(first, state.cur)} (FY${firstY}) to ${money(last, state.cur)} (FY${lastY})${isNum(gr) ? `: <b>${signedPct(gr)}</b> a year on average` : ''}.
+    It rose in <b>${ups}</b> years and fell in <b>${downs}</b>. ${isNum(g[g.length - 1]) ? `Latest year: ${signedPct(g[g.length - 1])}.` : ''}
+    EPS can also rise when a company buys back its own shares, because profit is shared among fewer shares.`);
+}
+
+function renderDividends(prices) {
+  const c = state.company, pal = palette(), pcur = state.pcur;
+  let payments = prices?.dividends;
+  let source = 'every payment recorded since listing';
+  if (!payments?.length) {
+    // No payment list from the data source: estimate from the cash flow statement (dividends paid ÷ shares).
+    payments = c.cashflow.map((cf) => {
+      const inc = c.income.find((r) => r.fiscalYear === cf.fiscalYear);
+      return isNum(cf.dividendsPaid) && cf.dividendsPaid !== 0 && inc?.sharesDiluted ? [`${cf.fiscalYear}-06-30`, Math.abs(cf.dividendsPaid) / inc.sharesDiluted] : null;
+    }).filter(Boolean);
+    source = 'estimated from the cash flow statement (dividends paid ÷ shares), by fiscal year';
+  }
+  const h = dividendHistory(payments);
+  const box = $('#div-text');
+  if (!h.rows.length) {
+    $('#div-box').innerHTML = '<p class="muted center" style="padding-top:110px">💤 No dividends paid in the available history.</p>';
+    box.innerHTML = arrow('This company has not paid dividends in the period we can see. Many growing companies reinvest all their profit (or buy back shares) instead.');
+    return;
+  }
+  barChart($('#c-div'), h.rows.map((r) => (r.partial ? `${r.year} (so far)` : String(r.year))),
+    [{ label: 'Dividends per share', data: h.rows.map((r) => Math.round(r.amount * 1e4) / 1e4), backgroundColor: h.rows.map((r) => (r.partial ? `${pal.accent}88` : pal.accent)) }],
+    { yFormat: (v) => money(Number(v), pcur), legend: false });
+  const yieldNow = isNum(h.lastFullAmount) && isNum(state.val.price) && state.val.price > 0 && pcur === (c.reportingCurrency || pcur) ? h.lastFullAmount / state.val.price : null;
+  box.innerHTML = arrow(`First dividend in our data: <b>${h.firstYear}</b>. In ${h.lastFullYear} one share received <b>${money(h.lastFullAmount, pcur)}</b>${isNum(yieldNow) ? ` (${pct(yieldNow, 2)} of today's price)` : ''}.
+    ${h.increaseStreak ? `The yearly total has risen for <b>${h.increaseStreak}</b> year${h.increaseStreak > 1 ? 's' : ''} in a row.` : 'The yearly total did not rise last year.'}
+    ${isNum(h.cagr10) ? `Over 10 years it grew ${pct(h.cagr10)} a year on average.` : ''}`) + `<p class="small muted" style="margin:0">Source: ${source}. A year's total depends on how many payments fell in that calendar year.</p>`;
+}
 
 // ---------- Business model story (overview) ----------
 // Pictures and short descriptions come from Wikipedia's public API (free, works from the browser).
@@ -773,8 +845,22 @@ renderSuggestions();
 setupSearch();
 const initial = new URLSearchParams(location.search).get('t');
 if (initial) load(initial);
+// Back/forward buttons: reload only when the ticker itself changed. (Clicking a section link such as
+// #overview also fires "popstate"; reloading then wiped the page and the link never arrived.)
 window.addEventListener('popstate', () => {
-  const t = new URLSearchParams(location.search).get('t');
-  if (t) load(t);
-  else { result.innerHTML = ''; compactHero(false); }
+  const t = (new URLSearchParams(location.search).get('t') || '').toUpperCase();
+  const shown = state.company?.profile?.symbol?.toUpperCase() || '';
+  if (t && t !== shown) load(t);
+  else if (!t) { result.innerHTML = ''; compactHero(false); state.company = null; }
+});
+
+// Section links (tabs, "See the full breakdown"...): scroll smoothly below the sticky bars.
+result.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const target = document.getElementById(a.getAttribute('href').slice(1));
+  if (!target) return;
+  e.preventDefault();
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  history.replaceState(history.state, '', `${location.search}#${target.id}`);
 });

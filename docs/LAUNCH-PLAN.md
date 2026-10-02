@@ -69,3 +69,14 @@ AdSense approves sites that have original, useful content. The lessons and calcu
 | Domain, hosting account | Needs your identity and payment | Steps 3–4 |
 | AdSense approval | Only Google approves, and only for the site owner | Step 6 |
 | Legal review and business registration | Needs a professional and your details | Step 5 |
+
+---
+
+## Managing reviews
+Visitors' reviews are saved for free in **Netlify Blobs** (built into Netlify; nothing to set up).
+To be able to delete a review (spam, insults):
+1. On Netlify: **Project configuration → Environment variables → Add a variable**: key `REVIEWS_ADMIN_TOKEN`, value = a secret word only you know. Then **Deploys → Trigger deploy**.
+2. Each review has an id. To find it, open `https://your-site/api/reviews` and look for `"id"` next to the review.
+3. Open `https://your-site/api/reviews?delete=THE_ID&token=YOUR_SECRET_WORD`. The review disappears.
+
+Built-in protection: links are not allowed, a hidden trap field catches spam robots, and each visitor can post at most 3 reviews per 10 minutes.

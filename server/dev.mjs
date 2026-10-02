@@ -23,7 +23,9 @@ async function serveFile(path, res, status = 200) {
 http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (url.pathname.startsWith('/api/')) {
-    const out = await handleApi(url);
+    let body = '';
+    if (req.method === 'POST') for await (const chunk of req) { body += chunk; if (body.length > 20000) break; }
+    const out = await handleApi(url, process.env, { method: req.method, body, ip: req.socket.remoteAddress });
     res.writeHead(out.status, out.headers);
     return res.end(out.body);
   }

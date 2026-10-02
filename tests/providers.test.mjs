@@ -176,3 +176,41 @@ test('Yahoo search and profile parsing', () => {
   assert.equal(p.marketCap, 4e13);
   assert.ok(Math.abs(p.changePercent - 1.2) < 1e-9);
 });
+
+test('reviews: validation, spam protection, listing and owner-only delete', async () => {
+  const { handleReviews, validateReview, setStoreForTests } = await import('../server/reviews.mjs');
+  const m = new Map();
+  setStoreForTests({ list: async () => [...m.keys()], get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); }, del: async (k) => { m.delete(k); } });
+  assert.ok(validateReview({ name: 'A', text: 'Great website!', rating: 5 }).error, 'name too short');
+  assert.ok(validateReview({ name: 'Ana', text: 'see http://spam.example', rating: 5 }).error, 'links blocked');
+  assert.ok(validateReview({ name: 'Ana', text: 'Great website!', rating: 7 }).error, 'rating 1-5');
+  assert.ok(validateReview({ name: 'Ana', text: 'Great website!', rating: 5, website: 'x' }).error, 'honeypot');
+  const env = { REVIEWS_ADMIN_TOKEN: 'secret' };
+  const url = new URL('http://x/api/reviews');
+  const [s1, b1] = await handleReviews({ method: 'POST', url, body: JSON.stringify({ name: 'Ana', text: 'Very clear lessons, thank you!', rating: 5, topic: 'Learn' }), ip: '1.1.1.1', env });
+  assert.equal(s1, 201);
+  assert.equal(b1.review.topic, 'Learn');
+  const [, list] = await handleReviews({ method: 'GET', url, env });
+  assert.equal(list.count, 1);
+  assert.equal(list.average, 5);
+  for (let i = 0; i < 3; i++) await handleReviews({ method: 'POST', url, body: JSON.stringify({ name: 'Bob', text: 'Another useful review', rating: 4 }), ip: '2.2.2.2', env });
+  const [s4] = await handleReviews({ method: 'POST', url, body: JSON.stringify({ name: 'Bob', text: 'Another useful review', rating: 4 }), ip: '2.2.2.2', env });
+  assert.equal(s4, 429, 'rate limited after 3 in 10 minutes');
+  const [sBad] = await handleReviews({ method: 'GET', url: new URL(`http://x/api/reviews?delete=${b1.review.id}&token=wrong`), env });
+  assert.equal(sBad, 403);
+  const [sOk] = await handleReviews({ method: 'GET', url: new URL(`http://x/api/reviews?delete=${b1.review.id}&token=secret`), env });
+  assert.equal(sOk, 200);
+  assert.equal(m.has(b1.review.id), false);
+});
+
+test('dividend history: yearly totals, increase streak, partial current year', async () => {
+  const { dividendHistory } = await import('../public/js/lib/finance.js');
+  const pay = [];
+  for (let y = 2014; y <= 2026; y++) for (const q of ['03', '06', '09', '12']) if (y < 2026 || q === '03') pay.push([`${y}-${q}-10`, 0.1 * 1.1 ** (y - 2014)]);
+  const h = dividendHistory(pay, new Date('2026-05-01'));
+  assert.equal(h.firstYear, 2014);
+  assert.equal(h.lastFullYear, 2025);
+  assert.equal(h.increaseStreak, 11);
+  assert.ok(h.rows[h.rows.length - 1].partial);
+  assert.ok(Math.abs(h.cagr10 - 0.1) < 1e-9);
+});

@@ -115,5 +115,15 @@ export function demoPrices() {
     }
     d.setUTCDate(d.getUTCDate() + 1);
   }
-  return { source: 'Sample data (fictional company)', dates, open, high, low, close, volume };
+  // A quarterly dividend since 2008, raised most years.
+  const dividends = [];
+  let dps = 0.05;
+  for (let y = 2008; y <= new Date().getFullYear(); y++) {
+    if (y > 2008 && y !== 2020) dps = Math.round(dps * 1.08 * 1000) / 1000;
+    for (const md of ['03-15', '06-15', '09-15', '12-15']) {
+      const date = `${y}-${md}`;
+      if (date <= dates[dates.length - 1]) dividends.push([date, dps]);
+    }
+  }
+  return { source: 'Sample data (fictional company)', dates, open, high, low, close, volume, dividends };
 }
