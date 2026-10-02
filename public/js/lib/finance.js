@@ -178,7 +178,11 @@ export function yearlyRatios(company) {
     const taxRate = safeDiv(inc.incomeTax, inc.pretaxIncome);
     const t = isNum(taxRate) ? Math.min(Math.max(taxRate, 0), 0.5) : 0.21;
     const cashLike = (b.cash || 0) + (b.shortTermInvestments || 0);
-    const investedCapital = isNum(b.totalEquity) ? b.totalEquity + (b.totalDebt || 0) - cashLike : null;
+    // A balance sheet with no borrowings reported means the company has no debt (not "unknown").
+    const hasBalance = isNum(b.totalAssets) || isNum(b.totalLiabilities);
+    const debt = isNum(b.totalDebt) ? b.totalDebt : hasBalance ? 0 : null;
+    const investedCapital = isNum(b.totalEquity) ? b.totalEquity + (debt || 0) - cashLike : null;
+    const divs = isNum(c.dividendsPaid) ? Math.abs(c.dividendsPaid) : isNum(c.operatingCashFlow) ? 0 : null;
     const r = {
       fiscalYear: inc.fiscalYear,
       // Profitability
@@ -194,10 +198,10 @@ export function yearlyRatios(company) {
       quickRatio: isNum(b.totalCurrentAssets) ? safeDiv(b.totalCurrentAssets - (b.inventory || 0), b.totalCurrentLiabilities) : null,
       cashRatio: safeDiv(cashLike, b.totalCurrentLiabilities),
       // Indebtedness & solvency
-      debtToEquity: isNum(b.totalEquity) && b.totalEquity > 0 ? safeDiv(b.totalDebt, b.totalEquity) : null,
-      debtToAssets: safeDiv(b.totalDebt, b.totalAssets),
+      debtToEquity: isNum(b.totalEquity) && b.totalEquity > 0 ? safeDiv(debt, b.totalEquity) : null,
+      debtToAssets: safeDiv(debt, b.totalAssets),
       liabilitiesToAssets: safeDiv(b.totalLiabilities, b.totalAssets),
-      netDebtToEbitda: isNum(b.totalDebt) && isNum(inc.ebitda) && inc.ebitda > 0 ? (b.totalDebt - cashLike) / inc.ebitda : null,
+      netDebtToEbitda: isNum(debt) && isNum(inc.ebitda) && inc.ebitda > 0 ? (debt - cashLike) / inc.ebitda : null,
       interestCoverage: isNum(inc.interestExpense) && inc.interestExpense > 0 ? safeDiv(inc.operatingIncome, Math.abs(inc.interestExpense)) : null,
       equityRatio: safeDiv(b.totalEquity, b.totalAssets),
       // Efficiency & cash
@@ -205,7 +209,7 @@ export function yearlyRatios(company) {
       fcfMargin: safeDiv(c.freeCashFlow, inc.revenue),
       cashConversion: isNum(inc.netIncome) && inc.netIncome > 0 ? safeDiv(c.freeCashFlow, inc.netIncome) : null,
       capexToRevenue: isNum(c.capitalExpenditure) ? safeDiv(Math.abs(c.capitalExpenditure), inc.revenue) : null,
-      payoutRatio: isNum(c.dividendsPaid) && isNum(inc.netIncome) && inc.netIncome > 0 ? Math.abs(c.dividendsPaid) / inc.netIncome : null,
+      payoutRatio: isNum(divs) && isNum(inc.netIncome) && inc.netIncome > 0 ? divs / inc.netIncome : null,
     };
     prevBal = b;
     return r;
@@ -372,5 +376,41 @@ export function dividendHistory(payments, today = new Date()) {
     lastFullAmount: last?.amount ?? null,
     increaseStreak: streak,
     cagr10: last && tenAgo ? cagr(tenAgo.amount, last.amount, 10) : null,
+  };
+}
+
+/**
+ * "What if I had invested?": buy at the first close on/after `startDate`, hold until the last price.
+ * Dividends paid after the purchase are either kept as cash or reinvested in more shares
+ * at that day's price. Prices and dividends are split-adjusted, so splits need no special handling.
+ */
+export function investmentSince({ prices, dividends = [], startDate, amount, reinvest = true }) {
+  const { dates, close } = prices;
+  const i0 = dates.findIndex((d) => d >= startDate);
+  if (i0 < 0 || !(amount > 0)) return null;
+  const buyPrice = close[i0];
+  let shares = amount / buyPrice, cash = 0, received = 0, di = 0;
+  const divs = dividends.filter(([d]) => d > dates[i0]);
+  const series = [];
+  const step = Math.max(1, Math.floor((dates.length - i0) / 400));
+  for (let i = i0; i < dates.length; i++) {
+    while (di < divs.length && divs[di][0] <= dates[i]) {
+      const pay = shares * divs[di][1];
+      received += pay;
+      if (reinvest) shares += pay / close[i];
+      else cash += pay;
+      di++;
+    }
+    if ((i - i0) % step === 0 || i === dates.length - 1) series.push([dates[i], shares * close[i] + cash]);
+  }
+  const last = dates.length - 1;
+  const value = shares * close[last] + cash;
+  const years = (Date.parse(dates[last]) - Date.parse(dates[i0])) / 3.15576e10;
+  return {
+    buyDate: dates[i0], buyPrice, endDate: dates[last], endPrice: close[last],
+    sharesBought: amount / buyPrice, sharesNow: shares, dividendsReceived: received, cash,
+    value, profit: value - amount, totalReturn: value / amount - 1,
+    annualReturn: years >= 1 ? (value / amount) ** (1 / years) - 1 : null, years,
+    priceOnlyReturn: close[last] / buyPrice - 1, series,
   };
 }

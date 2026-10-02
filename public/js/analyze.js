@@ -1,7 +1,7 @@
 // Section 3: type a ticker, get an objective analysis.
 // Everything shown is calculated from the company's own reported history. No ratings, no verdicts.
 import {
-  yearlyRatios, historySummary, currentValuation, historicalMultiples, dcf, average, isNum, growthSeries, splitAdjustedIncome, dividendHistory, cagr,
+  yearlyRatios, historySummary, currentValuation, historicalMultiples, dcf, average, isNum, growthSeries, splitAdjustedIncome, dividendHistory, cagr, investmentSince,
 } from './lib/finance.js';
 import { compact, money, pct, signedPct, times, plain, millions, words, escapeHtml, DASH } from './lib/format.js';
 import { barChart, lineChart, donutChart, palette } from './charts.js';
@@ -111,6 +111,7 @@ async function load(raw) {
   state.prices = prices.error ? null : prices;
   renderPrices(prices);
   renderDividends(state.prices);
+  renderWhatIf(state.prices);
   renderMultiplesHistory();
 }
 
@@ -151,7 +152,6 @@ function render(c) {
         <div class="price">${isNum(q.price) ? money(q.price, pcur) : '<span class="muted" style="font-size:1rem">Price unavailable</span>'}</div>
         ${isNum(q.change) ? `<div class="chg ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${money(Math.abs(q.change), pcur)} (${signedPct((q.changePercent || 0) / 100, 2)}) <span class="muted small">last session</span></div>` : ''}
       </div>
-      <a class="iv-badge hidden" id="iv-badge" href="#dcf" title="See the DCF model and change its assumptions">Intrinsic value (DCF) <b></b></a>
       <div class="dl">
         <button class="btn btn-accent" id="dl-btn" aria-haspopup="true" aria-expanded="false">⬇ Download statements</button>
         <div class="dl-menu hidden" id="dl-menu">
@@ -163,8 +163,8 @@ function render(c) {
   </div>
 
   <nav class="tabs" aria-label="Analysis sections">
-    <a href="#price" class="active">Price chart</a><a href="#overview">Overview</a><a href="#pershare">EPS &amp; dividends</a><a href="#business">Business</a>
-    <a href="#statements">Statements</a><a href="#ratios">Ratios</a><a href="#valuation">Valuation</a><a href="#dcf">DCF model</a>
+    <a href="#price" class="active">Price chart</a><a href="#overview">Overview</a><a href="#business">Business</a><a href="#pershare">EPS &amp; dividends</a>
+    <a href="#statements">Statements</a><a href="#ratios">Ratios</a><a href="#valuation">Valuation</a><a href="#dcf">DCF model</a><a href="#whatif">What if?</a>
   </nav>
 
   <section class="az-section" id="price">
@@ -198,29 +198,28 @@ function render(c) {
     <div id="glance">${glance(c, hist, ratios, val, cur)}</div>
   </section>
 
+  <section class="az-section" id="business">
+    <h2>The business</h2>
+    <div class="facts" id="facts"></div>
+    <div class="biz-grid">
+      <div class="card biz-about">
+        <h3 style="margin-top:0">🏢 What does ${escapeHtml(p.name)} do?</h3>
+        <div id="about-text"></div>
+      </div>
+      <div class="card" id="segments"></div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <h3 style="margin-top:0">🧾 Where every ${escapeHtml(cur === 'USD' ? '$' : '')}100 of sales goes <span class="muted small" style="font-weight:600">(FY${last.fiscalYear})</span></h3>
+      <div id="money-flow"></div>
+    </div>
+  </section>
+
   <section class="az-section" id="pershare">
     <h2>Earnings &amp; dividends per share</h2>
     <p class="muted small">What one share earned each year, and every dividend one share has received. Adjusted for stock splits so years can be compared.</p>
     <div class="grid grid-2">
       <div class="card"><h3 style="margin-top:0">📈 Earnings per share (EPS)</h3><div class="chart-box"><canvas id="c-eps"></canvas></div><div id="eps-text"></div></div>
       <div class="card"><h3 style="margin-top:0">💵 Dividends per share — full history</h3><div class="chart-box" id="div-box"><canvas id="c-div"></canvas></div><div id="div-text"><p class="muted small">Loading the dividend history…</p></div></div>
-    </div>
-  </section>
-
-  <section class="az-section" id="business">
-    <h2>The business</h2>
-    <div class="grid grid-2">
-      <div class="card">
-        <h3 style="margin-top:0">What does ${escapeHtml(p.name)} do?</h3>
-        ${p.description ? `<p>${escapeHtml(p.description)}</p>` : `<p class="muted">Our current data source does not provide a business description for this company. Its official industry classification is <b>${escapeHtml(p.industry || 'not available')}</b>. The company's annual report (Form 10-K, "Item 1. Business") describes its business model in detail.</p>`}
-        <div class="stats">
-          ${p.sector ? stat('Sector', escapeHtml(p.sector)) : ''}${p.industry ? stat('Industry', escapeHtml(p.industry)) : ''}
-          ${p.country ? stat('Country', escapeHtml(p.country)) : ''}${p.employees ? stat('Employees', p.employees.toLocaleString('en-US')) : ''}
-          ${p.ipoDate ? stat('Listed since', escapeHtml(p.ipoDate)) : ''}
-          ${p.website ? stat('Website', `<a href="${escapeHtml(p.website.startsWith('http') ? p.website : 'https://' + p.website)}" target="_blank" rel="noopener nofollow">visit ↗</a>`) : ''}
-        </div>
-      </div>
-      <div class="card" id="segments"></div>
     </div>
   </section>
 
@@ -235,7 +234,7 @@ function render(c) {
 
   <section class="az-section" id="ratios">
     <h2>Ratios over ${c.income.length} years</h2>
-    <p class="muted small">What each ratio means is explained in the last column and in <a href="/learn/ratios.html">lesson 4</a>.</p>
+    <p class="muted small">Newest year first. What each ratio means is written under its name and explained in the <a href="/learn/ratios.html">ratios lesson</a>.</p>
     <div class="grid grid-2">
       <div class="card"><h3 style="margin-top:0">Profit margins</h3><div class="chart-box short"><canvas id="c-margins"></canvas></div></div>
       <div class="card"><h3 style="margin-top:0">Returns on capital</h3><div class="chart-box short"><canvas id="c-returns"></canvas></div></div>
@@ -244,6 +243,7 @@ function render(c) {
     </div>
     <div id="ratio-explain" style="margin-top:16px">${ratioFacts(ratios)}</div>
     <div class="table-wrap ratio-table" style="margin-top:16px">${ratioTable(ratios)}</div>
+    <p class="small muted">— means the company did not report the numbers needed, or the ratio is not meaningful that year (for example a P/E or return when profit or equity is negative). A company with no borrowings shows debt ratios of 0.</p>
   </section>
 
   <section class="az-section" id="valuation">
@@ -269,11 +269,27 @@ function render(c) {
     </div>
   </section>
 
+  <section class="az-section" id="whatif">
+    <h2>💭 What if I had invested?</h2>
+    <p class="muted">Pick a date and an amount to see what an investment in ${escapeHtml(p.name)} would be worth today, based on the real daily prices and dividends.</p>
+    <div class="calc-layout" style="margin-top:12px">
+      <form class="card calc-form" id="wi-form" onsubmit="return false">
+        <div><label for="wi-amount">Amount invested</label><div class="input-unit"><input type="number" id="wi-amount" min="1" step="100" value="1000"><span class="unit">${escapeHtml(pcur)}</span></div></div>
+        <div><label for="wi-date">Date of purchase</label><input type="date" id="wi-date" style="width:100%;font:inherit;font-size:1.05rem;padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);min-height:52px">
+          <div class="range-btns" id="wi-quick" style="margin-top:8px"><button type="button" data-y="1">1 year ago</button><button type="button" data-y="5">5 years</button><button type="button" data-y="10">10 years</button><button type="button" data-y="0">At listing</button></div></div>
+        <label class="check"><input type="checkbox" id="wi-reinvest" checked> Reinvest dividends in more shares</label>
+        <p class="hint" style="margin:0">Taxes, fees and currency changes are not included.</p>
+      </form>
+      <div id="wi-out"><div class="spinner"></div><p class="center muted">Waiting for the price history…</p></div>
+    </div>
+  </section>
+
   <p class="small muted" style="margin-top:32px">Data: ${escapeHtml(c.source)}. Fiscal years as reported by the company. Ratios and models calculated by Financial Rat.
     Figures can contain errors or omissions from the data provider; check the company's official filings before relying on them. Nothing here is a recommendation to buy or sell.</p>`;
 
   wireDownload(c);
   wireTabs();
+  renderBusiness(c);
   renderSegments(c);
   renderStory(c);
   renderEps(c);
@@ -359,12 +375,12 @@ function renderSegments(c) {
   const mixCur = curatedNote && prof.mix.cur ? prof.mix.cur : cur;
   const kinds = [['product', 'By product / segment'], ['geographic', 'By region']].filter(([k]) => seg[k]?.items?.length);
   if (!kinds.length) {
-    box.innerHTML = `<h3 style="margin-top:0">Where the revenue comes from</h3>
+    box.innerHTML = `<h3 style="margin-top:0">🍩 Where the revenue comes from</h3>
       <p class="muted">A breakdown of revenue by product or region isn't available from our current data source for this company.
       You can find it in the "Segment information" note of the company's annual report.</p>`;
     return;
   }
-  box.innerHTML = `<div class="toolbar"><h3 style="margin:0">Where the revenue comes from</h3>
+  box.innerHTML = `<div class="toolbar"><h3 style="margin:0">🍩 Where the revenue comes from</h3>
     ${kinds.length > 1 ? `<div class="seg-btns" id="seg-btns">${kinds.map(([k, l], i) => `<button data-k="${k}"${i === 0 ? ' class="active"' : ''}>${l.replace('By ', '')}</button>`).join('')}</div>` : ''}</div>
     <div class="donut-wrap" style="margin-top:12px"><div class="chart-box short"><canvas id="c-donut" aria-label="Revenue sources"></canvas></div><ul class="legend-list" id="seg-legend"></ul></div>
     <div id="seg-explain"></div>${curatedNote}
@@ -388,7 +404,8 @@ function renderSegments(c) {
       items = [...items.slice(0, 6), { name: 'Other', value: rest }];
     }
     const colors = donutChart($('#c-donut'), items.map((i) => i.name), items.map((i) => i.value), { format: (v) => `${money2(v)} (${pct(v / total)})` });
-    $('#seg-legend').innerHTML = items.map((it, i) => `<li><span class="sw" style="background:${colors[i]}"></span><span>${escapeHtml(it.name)}</span><b>${pct(it.value / total)}</b><span class="muted">${isPct ? '' : money2(it.value)}</span></li>`).join('');
+    $('#seg-legend').innerHTML = items.map((it, i) => `<li class="seg-row"><div class="seg-top"><span><span class="sw" style="background:${colors[i]}"></span> ${escapeHtml(it.name)}</span><span><b>${pct(it.value / total)}</b> <span class="muted small">${isPct ? '' : money2(it.value)}</span></span></div>
+      <div class="seg-bar"><i style="width:${(it.value / items[0].value) * 100}%;background:${colors[i]}"></i></div></li>`).join('');
     const top = items[0];
     $('#seg-explain').innerHTML = arrow(`In FY${s.year}, the largest source was <b>${escapeHtml(top.name)}</b> with ${pct(top.value / total)} of the revenue reported in this breakdown.
       ${items.length > 1 ? `The top two sources together made up ${pct((items[0].value + items[1].value) / total)}.` : ''} The more concentrated the revenue, the more the company depends on that one source.`);
@@ -443,11 +460,13 @@ function renderStatement(kind) {
 // ---------- Ratios ----------
 function fmtRatio(v, f) { return f === 'pct' ? pct(v) : f === 'x1' ? times(v) : times(v, 2); }
 function ratioTable(ratios) {
-  const years = ratios.map((r) => `FY${r.fiscalYear}`);
-  const cols = years.length + 3;
-  return `<table><thead><tr><th>Ratio</th>${years.map((y) => `<th>${y}</th>`).join('')}<th>Average</th><th style="text-align:left">→ What it means</th></tr></thead><tbody>
+  // Newest year first (like Yahoo Finance), so the latest numbers are visible without scrolling.
+  const rows = [...ratios].reverse();
+  const cols = rows.length + 2;
+  const cell = (v, f) => (isNum(v) ? fmtRatio(v, f) : '<span class="na" title="Not reported, or not meaningful (e.g. negative profit or equity)">—</span>');
+  return `<table class="rt"><thead><tr><th>Ratio</th>${rows.map((y) => `<th>FY${y.fiscalYear}</th>`).join('')}<th>Average</th></tr></thead><tbody>
     ${RATIO_ROWS.map((r) => (r.group ? `<tr class="grp"><td colspan="${cols}">${r.group}</td></tr>`
-    : `<tr><td>${r.label}</td>${ratios.map((y) => `<td class="${isNum(y[r.key]) && y[r.key] < 0 ? 'neg' : ''}">${fmtRatio(y[r.key], r.fmt)}</td>`).join('')}<td><b>${fmtRatio(average(ratios.map((y) => y[r.key])), r.fmt)}</b></td><td>${r.explain}</td></tr>`)).join('')}
+    : `<tr><td><span class="rname">${r.label}</span><span class="rexp">${r.explain}</span></td>${rows.map((y) => `<td class="${isNum(y[r.key]) && y[r.key] < 0 ? 'neg' : ''}">${cell(y[r.key], r.fmt)}</td>`).join('')}<td><b>${cell(average(ratios.map((y) => y[r.key])), r.fmt)}</b></td></tr>`)).join('')}
   </tbody></table>`;
 }
 
@@ -506,7 +525,7 @@ function renderPrices(prices) {
     layout: { background: { color: 'transparent' }, textColor: v('--muted'), fontFamily: v('--font') },
     grid: { vertLines: { visible: false }, horzLines: { color: v('--line') } },
     rightPriceScale: { borderVisible: false },
-    timeScale: { borderVisible: false, timeVisible: false },
+    timeScale: { borderVisible: false, timeVisible: false, minBarSpacing: 0.01 },
     crosshair: { mode: 0 },
     localization: { priceFormatter: (x) => money(x, pcur) },
   });
@@ -546,9 +565,8 @@ function renderPrices(prices) {
     lineSeries.applyOptions({ visible: !candle });
   }));
   $('#log-scale').addEventListener('change', (e) => chart.priceScale('right').applyOptions({ mode: e.target.checked ? 1 : 0 }));
-  // Candles are easiest to read over a year; "Since IPO" shows the whole history.
-  const yearBtn = $('#range-btns button[data-r="1Y"]');
-  yearBtn.click();
+  // Open zoomed out on the last 10 years (or the whole history if shorter).
+  $('#range-btns button[data-r="10Y"]').click();
 }
 
 function priceStats(rows, range) {
@@ -673,11 +691,6 @@ function renderDcf(c, hist, val) {
         <tr class="total"><td>After ${lastInc.fiscalYear + 10}</td><td>${pct(v.terminal / 100)}</td><td></td><td>Terminal value ${compact(r.terminalValue, cur)}</td><td>${compact(r.pvTerminal, cur)}</td></tr>
         </tbody></table></div></details>
       ${arrow('The model is only as good as its assumptions. Using the company\'s history as the starting point is a neutral choice, not a forecast: the past does not guarantee the future.')}`;
-    const badge = $('#iv-badge');
-    if (badge) {
-      badge.classList.toggle('hidden', !(isNum(r.perShare) && r.perShare > 0));
-      badge.querySelector('b').textContent = isNum(r.perShare) ? money(r.perShare, pcur) : '';
-    }
     const pal = palette();
     const histYears = c.income.map((x) => `FY${x.fiscalYear}`);
     const projYears = r.rows.map((x) => `FY${lastInc.fiscalYear + x.year}`);
@@ -698,6 +711,106 @@ function renderDcf(c, hist, val) {
 }
 
 
+
+
+// ---------- Business section visuals ----------
+function renderBusiness(c) {
+  const p = c.profile, cur = state.cur, val = state.val;
+  const last = [...c.income].reverse().find((r) => isNum(r.revenue)) || c.income[c.income.length - 1];
+  const site = p.website ? (p.website.startsWith('http') ? p.website : `https://${p.website}`) : '';
+  const facts = [
+    ['🏷️', 'Sector', p.sector, 'var(--blue)'],
+    ['🏭', 'Industry', p.industry, 'var(--brand)'],
+    ['🌍', 'Country', p.country, 'var(--accent)'],
+    ['👥', 'Employees', p.employees ? p.employees.toLocaleString('en-US') : '', '#8b5cf6'],
+    ['📅', 'Listed since', p.ipoDate, 'var(--chart-6)'],
+    ['💰', `Revenue FY${last.fiscalYear}`, isNum(last.revenue) ? compact(last.revenue, cur) : '', 'var(--brand)'],
+    ['📊', 'Market value', isNum(val.marketCap) ? compact(val.marketCap, cur) : '', 'var(--blue)'],
+    ['🧑‍💼', 'Revenue per employee', p.employees && isNum(last.revenue) ? compact(last.revenue / p.employees, cur) : '', 'var(--accent)'],
+    ['🔗', 'Website', site ? `<a href="${escapeHtml(site)}" target="_blank" rel="noopener nofollow">${escapeHtml(site.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''))} ↗</a>` : '', '#64748b', true],
+  ].filter((f) => f[2]);
+  $('#facts').innerHTML = facts.map(([icon, k, v, color, html]) => `<div class="fact" style="--c:${color}"><span class="fi">${icon}</span><div><div class="fk">${k}</div><div class="fv">${html ? v : escapeHtml(v)}</div></div></div>`).join('');
+
+  const text = p.description || '';
+  const box = $('#about-text');
+  if (text) {
+    const sentences = text.match(/[^.!?]+[.!?]+(\s|$)/g) || [text];
+    const lead = sentences.slice(0, 2).join('').trim();
+    const rest = sentences.slice(2).join('').trim();
+    box.innerHTML = `<p class="lead-quote">${escapeHtml(lead)}</p>${rest ? `<details class="more"><summary>Read the full description</summary><p>${escapeHtml(rest)}</p></details>` : ''}`;
+  } else {
+    box.innerHTML = '<p class="lead-quote muted">Looking up a description…</p>';
+    if (!c.isDemo) wikiFindCompany(p.name).then((w) => {
+      box.innerHTML = w?.extract ? `<p class="lead-quote">${escapeHtml(firstSentences(w.extract, 3))}</p><p class="small muted"><a href="${escapeHtml(w.url)}" target="_blank" rel="noopener">Source: Wikipedia ↗</a></p>`
+        : `<p class="muted">No description is available from our data sources. The company's annual report ("Business" section) explains what it does. Industry: <b>${escapeHtml(p.industry || 'not available')}</b>.</p>`;
+    });
+  }
+
+  // Every 100 of sales split into: direct costs, operating costs, interest/tax/other, profit.
+  const flow = $('#money-flow');
+  const rev = last.revenue, gp = last.grossProfit, op = last.operatingIncome, ni = last.netIncome;
+  if (!(isNum(rev) && rev > 0 && isNum(op) && isNum(ni))) { flow.innerHTML = '<p class="muted">Not enough data for this year.</p>'; return; }
+  const cogs = isNum(gp) ? rev - gp : null;
+  const parts = [
+    ...(isNum(cogs) ? [['Direct costs (making the product)', cogs, 'var(--chart-7)']] : []),
+    [isNum(cogs) ? 'Operating costs (staff, R&D, marketing…)' : 'All operating costs', isNum(cogs) ? gp - op : rev - op, 'var(--chart-2)'],
+    ['Interest, tax & other', op - ni, 'var(--chart-3)'],
+    [ni >= 0 ? 'Profit for shareholders' : 'Loss', ni, ni >= 0 ? 'var(--brand)' : 'var(--red)'],
+  ];
+  if (parts.some(([, v]) => v < 0) && ni >= 0) {
+    flow.innerHTML = arrow(`Of every 100 of sales in FY${last.fiscalYear}, <b>${(ni / rev * 100).toFixed(1)}</b> ended up as profit for shareholders.`);
+    return;
+  }
+  const scale = ni >= 0 ? rev : rev - ni; // with a loss, costs exceed sales
+  flow.innerHTML = `<div class="flowbar">${parts.filter(([, v]) => v > 0 || v < 0).map(([, v, color]) => `<i style="flex:${Math.abs(v) / scale};background:${color}" title="${(Math.abs(v) / rev * 100).toFixed(1)}"></i>`).join('')}</div>
+    <div class="flow-legend">${parts.map(([label, v, color]) => `<div><span class="sw" style="background:${color}"></span><b>${(v / rev * 100).toFixed(1)}</b> ${escapeHtml(label)}</div>`).join('')}</div>
+    ${arrow(ni >= 0 ? `Out of every 100 the customers paid, <b>${(ni / rev * 100).toFixed(1)}</b> was left as profit after all costs, interest and taxes.` : `Costs were higher than sales: for every 100 of sales the company lost <b>${(-ni / rev * 100).toFixed(1)}</b>.`)}`;
+}
+
+
+// ---------- What if I had invested? ----------
+function renderWhatIf(prices) {
+  const out = $('#wi-out');
+  if (!out) return;
+  if (!prices?.dates?.length) { out.innerHTML = '<p class="muted">Needs the price history, which is not available right now.</p>'; return; }
+  const pcur = state.pcur, name = state.company.profile.name;
+  const first = prices.dates[0], lastD = prices.dates[prices.dates.length - 1];
+  const dateIn = $('#wi-date');
+  dateIn.min = first;
+  dateIn.max = lastD;
+  const yearsAgo = (y) => {
+    if (!y) return first;
+    const d = new Date(Date.parse(lastD) - y * 365.25 * 864e5).toISOString().slice(0, 10);
+    return d < first ? first : d;
+  };
+  dateIn.value = yearsAgo(10);
+  const run = () => {
+    const amount = Number($('#wi-amount').value);
+    const r = investmentSince({ prices, dividends: prices.dividends || [], startDate: dateIn.value || first, amount, reinvest: $('#wi-reinvest').checked });
+    if (!r) { out.innerHTML = '<div class="notice error">Choose an amount above zero and a date within the price history.</div>'; return; }
+    const up = r.value >= amount;
+    out.innerHTML = `<div class="answer" style="${up ? '' : 'background:linear-gradient(135deg,#b93838,#d64545)'}"><div class="label">${money(amount, pcur, 0)} invested in ${escapeHtml(name)} on ${r.buyDate} would be worth</div>
+        <div class="value">${money(r.value, pcur, 0)}</div>
+        <p class="say">${up ? 'A gain' : 'A loss'} of <b>${money(Math.abs(r.profit), pcur, 0)}</b> (${signedPct(r.totalReturn)})${isNum(r.annualReturn) ? `, or <b>${signedPct(r.annualReturn)}</b> a year on average over ${r.years.toFixed(1)} years` : ''}.</p></div>
+      <div class="stats">
+        ${stat('Bought at', `${money(r.buyPrice, pcur)} <span class="muted small">${r.buyDate}</span>`)}
+        ${stat('Price today', `${money(r.endPrice, pcur)} <span class="muted small">${r.endDate}</span>`)}
+        ${stat('Shares bought', r.sharesBought.toLocaleString('en-US', { maximumFractionDigits: 2 }))}
+        ${stat('Dividends received', money(r.dividendsReceived, pcur, 0))}
+        ${$('#wi-reinvest').checked ? stat('Shares today (with reinvested dividends)', r.sharesNow.toLocaleString('en-US', { maximumFractionDigits: 2 })) : ''}
+        ${stat('Price change alone', signedPct(r.priceOnlyReturn))}
+      </div>
+      <div class="card"><div class="chart-box short"><canvas id="c-whatif"></canvas></div></div>`;
+    const pal = palette();
+    lineChart($('#c-whatif'), r.series.map((x) => x[0]), [
+      { label: 'Value of the investment', data: r.series.map((x) => Math.round(x[1])), color: up ? pal.brand : pal.red, fill: true, pointRadius: 0, tension: 0.1 },
+      { label: 'Amount invested', data: r.series.map(() => amount), color: pal.muted, borderDash: [6, 6], pointRadius: 0, fill: false },
+    ], { yFormat: (v) => money(Number(v), pcur, 0), xFormat: function (v) { const l = this.getLabelForValue(v); return l ? l.slice(0, 4) : ''; } });
+  };
+  $('#wi-form').addEventListener('input', run);
+  $$('#wi-quick button').forEach((b) => b.addEventListener('click', () => { dateIn.value = yearsAgo(Number(b.dataset.y)); run(); }));
+  run();
+}
 
 // ---------- Earnings & dividends per share ----------
 function renderEps(c) {

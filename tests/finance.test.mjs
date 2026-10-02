@@ -114,3 +114,18 @@ test('priceOn finds the last close on or before a date', () => {
   assert.equal(priceOn(p, '2024-01-01'), null);
   assert.equal(priceOn(p, '2030-01-01'), 3);
 });
+
+test('what-if investment: price gain, dividends kept as cash or reinvested', async () => {
+  const { investmentSince } = await import('../public/js/lib/finance.js');
+  const prices = { dates: ['2020-01-02', '2020-06-01', '2021-01-04'], close: [10, 20, 20] };
+  const divs = [['2020-06-01', 1]];
+  const cash = investmentSince({ prices, dividends: divs, startDate: '2020-01-01', amount: 1000, reinvest: false });
+  near(cash.sharesBought, 100);
+  near(cash.dividendsReceived, 100);
+  near(cash.value, 2100);
+  const re = investmentSince({ prices, dividends: divs, startDate: '2020-01-01', amount: 1000, reinvest: true });
+  near(re.sharesNow, 105);
+  near(re.value, 2100);
+  near(re.annualReturn, 2.1 ** (1 / re.years) - 1, 1e-9);
+  assert.equal(investmentSince({ prices, startDate: '2030-01-01', amount: 1000 }), null);
+});
