@@ -517,7 +517,7 @@ function renderPrices(prices) {
   }));
   const line = candles.map((c) => ({ time: c.time, value: c.close }));
   const vols = Array.isArray(prices.volume) ? prices.dates.map((d, i) => ({
-    time: d, value: prices.volume[i] || 0, color: candles[i].close >= candles[i].open ? `${v('--brand')}55` : `${v('--red')}55`,
+    time: d, value: prices.volume[i] || 0, color: candles[i].close >= candles[i].open ? `${v('--brand')}38` : `${v('--red')}38`,
   })) : [];
 
   priceChartApi?.remove();
@@ -532,18 +532,29 @@ function renderPrices(prices) {
     localization: { priceFormatter: (x) => money(x, pcur) },
   });
   priceChartApi = chart;
+  // Never stretch the vertical axis to less than ±10% around the price: otherwise, on short ranges,
+  // ordinary small moves fill the whole chart and look dramatic.
+  const calmScale = (original) => {
+    const res = original();
+    if (!res?.priceRange) return res;
+    const { minValue, maxValue } = res.priceRange;
+    const mid = (minValue + maxValue) / 2, span = maxValue - minValue, minSpan = mid * 0.2;
+    if (span < minSpan) res.priceRange = { minValue: Math.max(0, mid - minSpan / 2), maxValue: mid + minSpan / 2 };
+    return res;
+  };
   const candleSeries = chart.addSeries(LWC.CandlestickSeries, {
     upColor: v('--brand'), downColor: v('--red'), borderVisible: false, wickUpColor: v('--brand'), wickDownColor: v('--red'),
+    autoscaleInfoProvider: calmScale,
   });
-  const lineSeries = chart.addSeries(LWC.LineSeries, { color: v('--brand'), lineWidth: 2, visible: false });
+  const lineSeries = chart.addSeries(LWC.LineSeries, { color: v('--brand'), lineWidth: 2, visible: false, autoscaleInfoProvider: calmScale });
   candleSeries.setData(candles);
   lineSeries.setData(line);
   if (vols.length) {
     const volSeries = chart.addSeries(LWC.HistogramSeries, { priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
-    chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+    chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
     volSeries.setData(vols);
   }
-  chart.priceScale('right').applyOptions({ scaleMargins: { top: 0.08, bottom: vols.length ? 0.22 : 0.05 } });
+  chart.priceScale('right').applyOptions({ scaleMargins: { top: 0.12, bottom: vols.length ? 0.26 : 0.08 } });
 
   const lastDate = candles[candles.length - 1].time;
   const setRange = (r) => {
@@ -954,6 +965,29 @@ function renderSuggestions() {
     <div class="sugg-group"><div class="sugg-title">${title}</div><div class="sugg-chips">${list.map(([t, n]) => `<button type="button" data-t="${t}"><b>${t}</b> <span>${escapeHtml(n)}</span></button>`).join('')}</div></div>`).join('')}
     <div class="sugg-group"><div class="sugg-title">🧪 Practice</div><div class="sugg-chips"><button type="button" data-t="DEMO"><b>DEMO</b> <span>Sample company</span></button></div></div></div></details>`;
 }
+
+
+// ---------- Symmetric tile grids ----------
+// Choose the number of columns so rows come out even (8 tiles → 4 + 4, 9 → 3 + 3 + 3) instead of 6 + 2.
+function balanceGrids(root = result) {
+  const MIN = { kpis: 150, facts: 160, stats: 130 };
+  root.querySelectorAll('.kpis, .facts, .stats').forEach((el) => {
+    const n = el.children.length;
+    if (!n) return;
+    const kind = Object.keys(MIN).find((k) => el.classList.contains(k));
+    const gap = 12, width = el.clientWidth || el.parentElement.clientWidth;
+    const maxCols = Math.max(1, Math.min(n, Math.floor((width + gap) / (MIN[kind] + gap))));
+    let best = maxCols, bestWaste = Infinity;
+    for (let c = maxCols; c >= Math.max(Math.min(2, maxCols), Math.ceil(maxCols / 2)); c--) {
+      const waste = Math.ceil(n / c) * c - n;
+      if (waste < bestWaste) { best = c; bestWaste = waste; }
+    }
+    el.style.gridTemplateColumns = `repeat(${best}, minmax(0, 1fr))`;
+  });
+}
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => balanceGrids(), 150); });
+new MutationObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => balanceGrids(), 50); }).observe(result, { childList: true, subtree: true });
 
 // ===================== Start =====================
 renderSuggestions();
