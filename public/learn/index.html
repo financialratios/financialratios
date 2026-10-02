@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Learn financial analysis from scratch — Financial Rat</title>
+  <meta name="description" content="A free, plain-language course: read an income statement, balance sheet and cash flow statement, calculate ratios, and value a company with DCF, P/E and EV/EBITDA.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-lesson="start">
+<div id="site-header"></div>
+<main id="main" class="container lesson-layout">
+  <aside class="lesson-nav" id="lesson-nav" aria-label="Lessons"></aside>
+  <article class="lesson">
+    <span class="eyebrow">Learn · Start here</span>
+    <h1>Financial analysis, from zero</h1>
+    <p class="intro">This short course takes you from "what is revenue?" to valuing a company yourself.
+      No previous knowledge needed. Each lesson takes about 10 minutes.</p>
+
+    <h2>How to read our lessons: follow the arrows</h2>
+    <p>Real financial statements are just lists of numbers. We show them exactly as companies publish them, and next to
+      every important number an <b style="color:var(--accent)">orange arrow</b> points to a short explanation on the same line. Try it:</p>
+
+    <div class="statement" aria-label="Example of an annotated statement">
+      <div class="st-title">Example <small>in dollars</small></div>
+      <div class="arow"><div class="line"><span>Revenue</span><span class="v">500,000</span></div><div class="arrow"></div>
+        <div class="note">All the money customers paid. <b>The starting point of everything.</b></div></div>
+      <div class="arow minus"><div class="line"><span>Costs</span><span class="v">(428,000)</span></div><div class="arrow"></div>
+        <div class="note">Numbers in (brackets) are taken away. Accountants never use minus signs.</div></div>
+      <div class="arow key"><div class="line"><span>Net income</span><span class="v">72,000</span></div><div class="arrow"></div>
+        <div class="note">What is left for the owners: the famous <b>"bottom line"</b>.</div></div>
+    </div>
+
+    <h2>The path</h2>
+    <div class="grid grid-2">
+      <a class="card calc-card" href="/learn/income-statement.html"><div class="icon">🧾</div><div><h3>1. Income statement</h3><p>Did the company make a profit this year?</p></div></a>
+      <a class="card calc-card" href="/learn/balance-sheet.html"><div class="icon">⚖️</div><div><h3>2. Balance sheet</h3><p>What does it own, and what does it owe, on one day?</p></div></a>
+      <a class="card calc-card" href="/learn/cash-flow.html"><div class="icon">💧</div><div><h3>3. Cash flow statement</h3><p>Where did the actual cash come from and go?</p></div></a>
+      <a class="card calc-card" href="/learn/ratios.html"><div class="icon">📐</div><div><h3>4. Ratios</h3><p>Profitability, debt and solvency, in a few simple divisions.</p></div></a>
+      <a class="card calc-card" href="/learn/valuation.html"><div class="icon">💎</div><div><h3>5. Valuation</h3><p>P/E, EV/EBITDA and a DCF built step by step.</p></div></a>
+      <a class="card calc-card" href="/learn/case-studies.html"><div class="icon">🏭</div><div><h3>6. Three real companies</h3><p>Caterpillar, Procter &amp; Gamble and Microsoft compared.</p></div></a>
+    </div>
+
+    <div class="callout grandpa"><span class="t">👴 The one-sentence version</span>
+      The <b>income statement</b> is the company's year as a film, the <b>balance sheet</b> is a photo taken on the last day,
+      and the <b>cash flow statement</b> follows the real money — together they tell you if a business is healthy.</div>
+
+    <h2>Meet our example company: Rat Bakery</h2>
+    <p>To learn without distractions, lessons 1–5 use one small, made-up business: <b>Rat Bakery Ltd.</b>, a bakery that sells bread
+      to walk-in customers and to local cafés. It has 10,000 shares owned by its founders. Because the numbers are small and round,
+      you can check every calculation with a pocket calculator. In lesson 6 we move to real, famous companies.</p>
+    <div class="callout tip"><span class="t">💡 Why a bakery?</span>
+      Every big company works exactly the same way, just with more zeros. Apple's income statement has the same lines as Rat Bakery's.</div>
+
+    <div class="ad-slot" data-slot="middle"></div>
+    <nav class="lesson-pager" id="lesson-pager"></nav>
+  </article>
+</main>
+<div id="site-footer"></div>
+<script type="module" src="/js/site.js"></script>
+<script type="module" src="/js/learn.js"></script>
+</body>
+</html>

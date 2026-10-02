@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cyclical vs defensive vs growth stocks: Caterpillar, P&amp;G and Microsoft compared — Financial Rat</title>
+  <meta name="description" content="Three real companies from three kinds of sectors analyzed side by side: cyclical Caterpillar, defensive Procter & Gamble and growth Microsoft. Revenue, margins, debt and valuation explained simply.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-lesson="cases">
+<div id="site-header"></div>
+<main id="main" class="container lesson-layout">
+  <aside class="lesson-nav" id="lesson-nav" aria-label="Lessons"></aside>
+  <article class="lesson">
+    <span class="eyebrow">Lesson 6 · Real companies</span>
+    <h1>Cyclical, defensive and growth: three companies compared</h1>
+    <p class="intro">Now let's use everything we learned on three famous companies that behave very differently when the economy changes.
+      Same tools, three completely different stories.</p>
+
+    <div class="callout grandpa"><span class="t">👴 In one sentence</span>
+      People stop buying bulldozers in a recession, but they never stop buying toothpaste — and that difference shows up in every number.</div>
+
+    <div class="grid grid-3">
+      <div class="card ratio-card" style="--c:var(--accent)"><span class="pill">Cyclical</span><h3 style="margin-top:8px">Caterpillar (CAT)</h3>
+        <p class="muted" style="margin:0">Construction and mining machines, engines and turbines. Sales follow the economy up <b>and down</b>.</p></div>
+      <div class="card ratio-card" style="--c:var(--brand)"><span class="pill">Defensive (non-cyclical)</span><h3 style="margin-top:8px">Procter &amp; Gamble (PG)</h3>
+        <p class="muted" style="margin:0">Tide, Pampers, Gillette, Oral-B. Things people buy every week, whatever the economy.</p></div>
+      <div class="card ratio-card" style="--c:var(--blue)"><span class="pill">Growth / technology</span><h3 style="margin-top:8px">Microsoft (MSFT)</h3>
+        <p class="muted" style="margin:0">Cloud computing (Azure), Office, Windows, LinkedIn, Xbox. Mostly subscriptions.</p></div>
+    </div>
+
+    <div class="callout warn"><span class="t">📌 About the numbers</span>
+      Figures are rounded, in US$ billions, taken from each company's annual reports (Form 10-K). Caterpillar's year ends in December;
+      P&amp;G's and Microsoft's fiscal years end in June. They are for learning only — for complete and current figures open each company in the
+      analysis section: <a href="/analyze/?t=CAT">CAT</a>, <a href="/analyze/?t=PG">PG</a>, <a href="/analyze/?t=MSFT">MSFT</a>.</div>
+
+    <h2>1. Revenue: the ride matters, not just the destination</h2>
+    <p>The chart sets each company's 2019 revenue to 100, so you can compare their paths regardless of size.</p>
+    <div class="card"><div class="chart-box"><canvas id="c-rev" aria-label="Revenue indexed to 100 in 2019"></canvas></div></div>
+    <div class="table-wrap" style="margin-top:16px"><table>
+      <thead><tr><th>Revenue ($bn)</th><th>2019</th><th>2020</th><th>2021</th><th>2022</th><th>2023</th><th>2024</th><th>Yearly growth (CAGR)</th></tr></thead>
+      <tbody>
+        <tr><td>Caterpillar</td><td>53.8</td><td class="neg">41.7</td><td>51.0</td><td>59.4</td><td>67.1</td><td>64.8</td><td>3.8%</td></tr>
+        <tr><td>Procter &amp; Gamble</td><td>67.7</td><td>71.0</td><td>76.1</td><td>80.2</td><td>82.0</td><td>84.0</td><td>4.4%</td></tr>
+        <tr><td>Microsoft</td><td>125.8</td><td>143.0</td><td>168.1</td><td>198.3</td><td>211.9</td><td>245.1</td><td>14.3%</td></tr>
+      </tbody></table></div>
+    <div class="explain"><span class="ar">→</span><p><b>Surprise:</b> Caterpillar and P&amp;G grew at almost the same average speed (about 4% a year). But Caterpillar's sales fell <b>22%</b> in 2020
+      while P&amp;G's <b>rose 5%</b>. An average hides the ride — which is why our analysis pages always show the worst year and the volatility of growth next to the average.</p></div>
+    <div class="explain"><span class="ar">→</span><p>The 2009 financial crisis tells the same story: Caterpillar's sales dropped by about <b>37%</b> (from $51.3bn to $32.4bn), P&amp;G's by only about 3%.</p></div>
+
+    <div class="card" style="margin-top:20px"><h3 style="margin-top:0">Revenue change in the 2020 shock</h3><div class="chart-box short"><canvas id="c-shock"></canvas></div></div>
+
+    <h2>2. Profit: operating leverage in action</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Net income ($bn)</th><th>2019</th><th>2020</th><th>2021</th><th>2022</th><th>2023</th><th>2024</th></tr></thead>
+      <tbody>
+        <tr><td>Caterpillar</td><td>6.1</td><td class="neg">3.0</td><td>6.5</td><td>6.7</td><td>10.3</td><td>10.8</td></tr>
+        <tr><td>Procter &amp; Gamble</td><td>3.9*</td><td>13.0</td><td>14.3</td><td>14.7</td><td>14.7</td><td>14.9</td></tr>
+        <tr><td>Microsoft</td><td>39.2</td><td>44.3</td><td>61.3</td><td>72.7</td><td>72.4</td><td>88.1</td></tr>
+      </tbody></table></div>
+    <p class="small muted">* P&amp;G's 2019 profit was cut by an $8.3bn non-cash write-down of the Gillette business — a one-off item (see lesson 1: always check for one-offs).</p>
+    <div class="card"><h3 style="margin-top:0">Net margin (net income ÷ revenue)</h3><div class="chart-box"><canvas id="c-margin"></canvas></div></div>
+    <div class="explain"><span class="ar">→</span><p><b>Caterpillar:</b> revenue fell 22% in 2020 but profit fell about <b>51%</b>. Factories, engineers and dealers cost money even when fewer machines are sold
+      — remember the bakery quiz on operating leverage? It works in both directions: when demand came back, profit grew much faster than sales (net margin from ~7% to ~17%).</p></div>
+    <div class="explain"><span class="ar">→</span><p><b>P&amp;G:</b> net margin stays in a narrow band around 17–19%. Strong brands let it raise prices when its own costs rise.</p></div>
+    <div class="explain"><span class="ar">→</span><p><b>Microsoft:</b> margins above 30%. Selling one more software subscription costs almost nothing, so most extra revenue becomes profit. Building data centres for the cloud, however, now requires very large capital spending — watch capex in its cash flow statement.</p></div>
+
+    <h2>3. Side by side</h2>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th></th><th>Caterpillar</th><th>Procter &amp; Gamble</th><th>Microsoft</th></tr></thead>
+      <tbody>
+        <tr><td><b>Business model</b></td><td>Sells expensive machines customers can postpone buying; services and parts are steadier</td><td>Sells cheap everyday necessities, bought again and again</td><td>Sells software and cloud services, mostly as recurring subscriptions</td></tr>
+        <tr><td><b>Revenue in bad times</b></td><td>Falls sharply (−22% in 2020, −37% in 2009)</td><td>Barely moves</td><td>Kept growing in 2020; dipped slightly in 2009</td></tr>
+        <tr><td><b>Net margin (2024)</b></td><td>≈ 17% (≈ 7% in 2020)</td><td>≈ 18%</td><td>≈ 36%</td></tr>
+        <tr><td><b>Debt</b></td><td>Looks high, but much of it funds loans to customers buying machines (Cat Financial) — read the notes before comparing</td><td>Moderate; steady cash flow makes debt easier to carry</td><td>Low compared with its cash flow</td></tr>
+        <tr><td><b>Dividends</b></td><td>Raised every year for more than 25 years</td><td>Raised every year for more than 60 years</td><td>Paid since 2003, raised regularly</td></tr>
+        <tr><td><b>What drives it</b></td><td>Construction, mining and energy investment; commodity prices; interest rates</td><td>Population, prices, brand strength; costs of raw materials and currencies</td><td>Cloud and AI demand; corporate IT budgets; competition</td></tr>
+      </tbody></table></div>
+
+    <h2>4. How the type of company changes the way we read valuation</h2>
+    <div class="explain"><span class="ar">→</span><p><b>Cyclicals and the P/E trap.</b> At the top of the cycle profits are at their highest, so the P/E looks <b>low</b>. At the bottom, profits shrink and the P/E looks <b>high</b>.
+      For a cyclical company a single year's P/E can therefore point in the opposite direction from what beginners expect. Analysts often average earnings over a full cycle (e.g. 7–10 years) instead.</p></div>
+    <div class="explain"><span class="ar">→</span><p><b>Defensives and stable multiples.</b> Because profits are steady, P/E and EV/EBITDA tend to move in a narrower range, and investors often accept higher multiples in exchange for that stability.</p></div>
+    <div class="explain"><span class="ar">→</span><p><b>Growth companies and the DCF.</b> Most of the value lies in profits many years away, so the answer depends heavily on the growth rate and discount rate you choose (lesson 5, step 6).</p></div>
+    <div class="explain"><span class="ar">→</span><p><b>For a DCF on any of them,</b> using a 10-year history captures a fuller cycle than the last 2–3 years. That's why our analysis pages use the 10-year average growth as the default — and let you change it.</p></div>
+
+    <h2>5. What to take away</h2>
+    <ul>
+      <li>Always look at <b>10 years</b>, not one. A single year can be a peak or a trough.</li>
+      <li>Ask <b>"what happens to this company in a recession?"</b> The answer shapes everything else.</li>
+      <li>Similar averages can hide very different risks — check the <b>worst year</b> and the volatility.</li>
+      <li>There is no "best" type: cyclicals, defensives and growth companies each fit different goals and temperaments.</li>
+    </ul>
+
+    <div class="callout tip"><span class="t">🔍 Your turn</span>
+      Open <a href="/analyze/?t=CAT">Caterpillar</a>, <a href="/analyze/?t=PG">Procter &amp; Gamble</a> and <a href="/analyze/?t=MSFT">Microsoft</a> in the analysis section and look for these patterns in their latest 10 years:
+      the revenue growth volatility, the margin chart and the historical P/E.</div>
+
+    <div class="quiz"><b>✏️ Check yourself:</b> a steel maker has a P/E of 5 after a record year. Is it automatically cheap?
+      <details><summary>Show the answer</summary>
+        <p>No. Steel is very cyclical. A record year often means profits near the top of the cycle; if profits fall by 70% the next year, the "real" P/E at today's price would be about 17. Look at earnings over the whole cycle.</p>
+      </details>
+    </div>
+
+    <div class="ad-slot" data-slot="middle"></div>
+    <nav class="lesson-pager" id="lesson-pager"></nav>
+  </article>
+</main>
+<div id="site-footer"></div>
+<script src="/vendor/chart.umd.min.js"></script>
+<script type="module" src="/js/site.js"></script>
+<script type="module" src="/js/learn.js"></script>
+<script type="module">
+  import { lineChart, barChart, palette } from '/js/charts.js';
+  const years = ['2019', '2020', '2021', '2022', '2023', '2024'];
+  const rev = { CAT: [53.8, 41.7, 51.0, 59.4, 67.1, 64.8], PG: [67.7, 71.0, 76.1, 80.2, 82.0, 84.0], MSFT: [125.8, 143.0, 168.1, 198.3, 211.9, 245.1] };
+  const ni = { CAT: [6.1, 3.0, 6.5, 6.7, 10.3, 10.8], PG: [3.9, 13.0, 14.3, 14.7, 14.7, 14.9], MSFT: [39.2, 44.3, 61.3, 72.7, 72.4, 88.1] };
+  const p = palette();
+  const colors = { CAT: p.accent, PG: p.brand, MSFT: p.blue };
+  const names = { CAT: 'Caterpillar', PG: 'Procter & Gamble', MSFT: 'Microsoft' };
+  const keys = Object.keys(rev);
+  lineChart(document.getElementById('c-rev'), years, keys.map((k) => ({ label: names[k], color: colors[k], data: rev[k].map((v) => Math.round((v / rev[k][0]) * 1000) / 10) })), { yFormat: (v) => Number(v).toFixed(0) });
+  barChart(document.getElementById('c-shock'), keys.map((k) => names[k]), [{ label: 'Revenue change 2019 → 2020', data: keys.map((k) => Math.round((rev[k][1] / rev[k][0] - 1) * 1000) / 10), color: p.brand, colorBySign: true }], { yFormat: (v) => `${v}%`, legend: false });
+  lineChart(document.getElementById('c-margin'), years, keys.map((k) => ({ label: names[k], color: colors[k], data: ni[k].map((v, i) => Math.round((v / rev[k][i]) * 1000) / 10) })), { yFormat: (v) => `${v}%` });
+</script>
+</body>
+</html>
