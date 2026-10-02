@@ -468,3 +468,11 @@ textarea:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 4p
 .rt .na { color: var(--muted); cursor: help; }
 .ratio-table td:last-child { white-space: nowrap; min-width: 0; text-align: right; color: inherit; font-size: inherit; }
 .ratio-table tr.grp td { text-align: left; white-space: nowrap; font-size: .9rem; }
+
+/* Analysis page: tighter spacing between sections, symmetric grids */
+.az-section { padding-top: 4px; }
+.az-section > h2, .az-section > .toolbar h2 { margin-top: 14px !important; margin-bottom: 10px; }
+.az-section > .toolbar { margin-top: 14px; }
+#result .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { #result .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+#result .stats { margin: 12px 0; }

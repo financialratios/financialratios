@@ -164,6 +164,7 @@ export async function downloadPdf(company) {
       : [pdfSafe(l.label), ...l.values.map((v) => fmt(v, l.kind))]));
     doc.autoTable({
       startY: 94,
+      showHead: 'firstPage', // if a table continues on the next page, don't repeat the column titles
       head: [['Breakdown', ...years.map((r) => `FY${r.fiscalYear}`)], ['', ...years.map((r) => usDate(r.date))]],
       body,
       styles: { fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 4, right: 6 }, halign: 'right', lineWidth: 0 },
