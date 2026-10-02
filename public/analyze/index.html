@@ -15,7 +15,7 @@
     <div class="container">
       <span class="eyebrow">Section 3 · Company analysis</span>
       <h1 id="search-title">Which company do you want to understand?</h1>
-      <p class="muted" id="search-sub">Type a ticker symbol (like AAPL for Apple) or a company name.</p>
+      <p class="muted" id="search-sub">Type a ticker symbol (like AAPL for Apple, 7203.T for Toyota) or a company name — companies from around the world are included.</p>
       <div class="search-box">
         <form id="search-form" role="search" autocomplete="off">
           <input type="search" id="q" placeholder="Ticker or company name" aria-label="Ticker or company name"
@@ -24,11 +24,7 @@
         </form>
         <ul class="suggest hidden" id="suggest" role="listbox"></ul>
       </div>
-      <div class="quick-picks" id="quick-picks">
-        <span class="muted small" style="align-self:center">Try:</span>
-        <button data-t="AAPL">AAPL</button><button data-t="MSFT">MSFT</button><button data-t="KO">KO</button>
-        <button data-t="CAT">CAT</button><button data-t="PG">PG</button><button data-t="DEMO">DEMO (sample)</button>
-      </div>
+      <div class="quick-picks" id="quick-picks"></div>
     </div>
   </section>
   <div class="container" id="result" aria-live="polite"></div>
@@ -36,6 +32,7 @@
 </main>
 <div id="site-footer"></div>
 <script src="/vendor/chart.umd.min.js"></script>
+<script src="/vendor/lightweight-charts.standalone.production.js"></script>
 <script type="module" src="/js/site.js"></script>
 <script type="module" src="/js/analyze.js"></script>
 </body>

@@ -2,6 +2,13 @@
 const LESSONS = [
   { group: 'Start here' },
   { id: 'start', href: '/learn/', title: 'How to use this course' },
+  { group: 'Money & markets' },
+  { id: 'branches', href: '/learn/branches-of-finance.html', title: 'The branches of finance' },
+  { id: 'markets', href: '/learn/financial-markets.html', title: 'Primary & secondary markets' },
+  { id: 'stocks', href: '/learn/stocks.html', title: 'What is a stock?' },
+  { id: 'bonds', href: '/learn/bonds.html', title: 'What is a bond?' },
+  { id: 'gold', href: '/learn/gold-and-silver.html', title: 'Gold & silver: 2,600 years' },
+  { id: 'funds', href: '/learn/funds-and-risk.html', title: 'Funds, risk & interest rates' },
   { group: 'The 3 financial statements' },
   { id: 'income', href: '/learn/income-statement.html', title: 'Income statement' },
   { id: 'balance', href: '/learn/balance-sheet.html', title: 'Balance sheet' },
@@ -9,9 +16,11 @@ const LESSONS = [
   { group: 'Ratios' },
   { id: 'ratios', href: '/learn/ratios.html', title: 'Profitability, debt & solvency' },
   { group: 'Valuation' },
-  { id: 'valuation', href: '/learn/valuation.html', title: 'P/E, EV/EBITDA & DCF' },
+  { id: 'valuation', href: '/learn/valuation.html', title: 'Multiples: P/E, EV/EBITDA' },
+  { id: 'dcf', href: '/learn/dcf.html', title: 'DCF step by step (WACC)' },
   { group: 'Real companies' },
-  { id: 'cases', href: '/learn/case-studies.html', title: 'Cyclical vs defensive vs growth' },
+  { id: 'industries', href: '/learn/industries.html', title: 'Every industry is different' },
+  { id: 'cases', href: '/learn/case-studies.html', title: 'The economic cycle' },
 ];
 
 const current = document.body.dataset.lesson;

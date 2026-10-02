@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What is a bond? Coupon, yield and price explained — Financial Rat</title>
+  <meta name="description" content="What a bond is, face value, coupon and maturity, why bond prices fall when interest rates rise, credit ratings, government vs corporate bonds, with worked examples.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-lesson="bonds">
+<div id="site-header"></div>
+<main id="main" class="container lesson-layout">
+  <aside class="lesson-nav" id="lesson-nav" aria-label="Lessons"></aside>
+  <article class="lesson">
+    <span class="eyebrow">Money & markets · 4</span>
+    <h1>What is a bond?</h1>
+    <p class="intro">A <b>bond</b> is a loan that <b>you</b> make to a government or a company. In return they promise to pay you interest regularly and give your money back on a fixed date.</p>
+    <div class="callout grandpa"><span class="t">👴 In one sentence</span>
+      With a share you become an owner; with a bond you become a lender.</div>
+
+    <h2>The vocabulary of a bond</h2>
+    <div class="statement">
+      <div class="st-title">Example bond <small>issued by "Rat Bakery Ltd."</small></div>
+      <div class="arow "><div class="line"><span>Face value (par)</span><span class="v">1,000</span></div><div class="arrow"></div>
+        <div class="note">The amount you get back at the end.</div></div>      <div class="arow "><div class="line"><span>Coupon rate</span><span class="v">5%</span></div><div class="arrow"></div>
+        <div class="note">The yearly interest, as a % of face value: <b>$50 a year</b>.</div></div>      <div class="arow "><div class="line"><span>Maturity</span><span class="v">10 years</span></div><div class="arrow"></div>
+        <div class="note">When the loan is repaid. Bonds can last from a few months to 30+ years.</div></div>      <div class="arow "><div class="line"><span>Issuer</span><span class="v">Rat Bakery</span></div><div class="arrow"></div>
+        <div class="note">Who borrows. Its ability to pay is the main risk.</div></div>      <div class="arow key"><div class="line"><span>Total you receive</span><span class="v">1,500</span></div><div class="arrow"></div>
+        <div class="note">10 coupons of $50 + $1,000 at maturity.</div></div>
+    </div>
+
+    <h2>The most important rule: prices and interest rates move in opposite directions</h2>
+    <p>Imagine you hold the 5% bond above. Next day, interest rates rise and new bonds pay <b>6%</b>. Nobody would pay you $1,000 for a bond paying only $50 when a new one pays $60. Your bond's price must fall until its return matches 6%:</p>
+    <div class="statement">
+      <div class="st-title">Same bond, different market interest rates <small>10 years left</small></div>
+      <div class="arow minus"><div class="line"><span>Market rates rise to 6%</span><span class="v">926</span></div><div class="arrow"></div>
+        <div class="note">Price falls about 7.4%. A buyer at $926 still earns about 6% a year (coupons + the $74 gain at maturity).</div></div>      <div class="arow "><div class="line"><span>Market rates stay at 5%</span><span class="v">1,000</span></div><div class="arrow"></div>
+        <div class="note">Price stays at face value.</div></div>      <div class="arow key"><div class="line"><span>Market rates fall to 4%</span><span class="v">1,081</span></div><div class="arrow"></div>
+        <div class="note">Price rises about 8.1%: your 5% coupon is now attractive.</div></div>
+    </div>
+    <p>The return a buyer gets at today's price is called the <b>yield</b> (more precisely, <b>yield to maturity</b>). When the news says "bond yields rose", it means bond prices fell. Longer bonds react more strongly to rate changes; this sensitivity is called <b>duration</b>.</p>
+    <div class="explain"><span class="ar">→</span><p style="margin:0"><b>Real example:</b> in 2022, central banks raised rates quickly to fight inflation, and long-term government bonds, usually seen as "safe", suffered some of their worst price falls in decades. Safe from default does not mean safe from price swings.</p></div>
+    <div class="formula"><span class="eq">Bond price</span> = coupon ÷ (1+y)<sup>1</sup> + coupon ÷ (1+y)<sup>2</sup> + … + (coupon + face value) ÷ (1+y)<sup>n</sup> — y: market yield, n: years left. It is the same "present value" idea as the DCF.</div>
+
+    <h2>Credit risk and ratings</h2>
+    <p>The other big risk is that the borrower cannot pay (<b>default</b>). Agencies such as S&amp;P, Moody's and Fitch grade borrowers:</p>
+    <div class="table-wrap"><table class="compare"><thead><tr><th>Rating (S&amp;P style)</th><th>Meaning</th><th>Interest demanded</th></tr></thead><tbody>
+      <tr><td><b>AAA, AA</b></td><td>Very strong (e.g. Germany, Microsoft)</td><td>Lowest</td></tr>
+      <tr><td><b>A, BBB</b></td><td>Good to adequate. <b>BBB− is the lowest "investment grade"</b>; Romania's government has been rated around this level</td><td>Moderate</td></tr>
+      <tr><td><b>BB, B</b></td><td>"High yield" or "junk": speculative</td><td>Higher</td></tr>
+      <tr><td><b>CCC … D</b></td><td>Very risky … in default</td><td>Very high</td></tr>
+    </tbody></table></div>
+    <p>Defaults happen even to countries: Greece restructured its debt in 2012, and Argentina has defaulted several times in its history.</p>
+
+    <h2>Kinds of bonds</h2>
+    <div class="table-wrap"><table class="compare"><tbody>
+      <tr><td><b>Government bonds</b></td><td>US Treasuries, German Bunds, Romanian government bonds (including Fidelis and Tezaur for individuals). The yield on 10-year government bonds is used as the <b>risk-free rate</b> in valuation (DCF lesson).</td></tr>
+      <tr><td><b>Corporate bonds</b></td><td>Issued by companies; pay more than government bonds because of credit risk.</td></tr>
+      <tr><td><b>Municipal bonds</b></td><td>Issued by cities and regions.</td></tr>
+      <tr><td><b>Inflation-linked bonds</b></td><td>Repayments rise with inflation (e.g. US TIPS).</td></tr>
+      <tr><td><b>Zero-coupon bonds</b></td><td>No yearly interest; bought below face value and repaid at face value.</td></tr>
+    </tbody></table></div>
+
+    <h2>Stocks vs bonds</h2>
+    <div class="table-wrap"><table class="compare"><thead><tr><th></th><th>Stock</th><th>Bond</th></tr></thead><tbody>
+      <tr><td>You are</td><td>An owner</td><td>A lender</td></tr>
+      <tr><td>Income</td><td>Dividends, if the company decides to pay</td><td>Fixed coupons, a legal obligation</td></tr>
+      <tr><td>At the end</td><td>No end date</td><td>Face value repaid at maturity</td></tr>
+      <tr><td>If things go wrong</td><td>Paid last</td><td>Paid before shareholders</td></tr>
+      <tr><td>Upside</td><td>Unlimited</td><td>Limited to coupons (+ a price gain if rates fall)</td></tr>
+    </tbody></table></div>
+    <div class="quiz"><b>✏️ Check yourself:</b> You own a bond paying a 3% coupon. Interest rates on new bonds rise to 5%. Will your bond's price go up or down?
+      <details><summary>Show the answer</summary><p><b>Down.</b> Your 3% bond is less attractive than new 5% bonds, so buyers will only take it at a lower price. If you hold it until maturity you still get the full face value back.</p></details>
+    </div>
+    <div class="ad-slot" data-slot="middle"></div>
+    <nav class="lesson-pager" id="lesson-pager"></nav>
+  </article>
+</main>
+<div id="site-footer"></div>
+<script type="module" src="/js/site.js"></script>
+<script type="module" src="/js/learn.js"></script>
+</body>
+</html>

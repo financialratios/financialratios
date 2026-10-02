@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fmpCompany, mapSegments } from '../server/providers/fmp.mjs';
 import { parseCompanyFacts } from '../server/providers/sec.mjs';
-import { parseChart } from '../server/providers/yahoo.mjs';
+import { parseChart, parseTimeseries, parseSearch, parseQuoteSummary } from '../server/providers/yahoo.mjs';
+import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { handleApi } from '../server/core.mjs';
 
 // Responses shaped like Financial Modeling Prep's documented "stable" API.
@@ -97,6 +99,7 @@ test('Yahoo chart response is parsed into dates and closes', () => {
     timestamp: [345479400, 345565800, 345652200], indicators: { quote: [{ close: [0.1, null, 0.12] }] } }] } });
   assert.deepEqual(p.dates, ['1980-12-12', '1980-12-14']);
   assert.deepEqual(p.close, [0.1, 0.12]);
+  assert.deepEqual(p.open, [0.1, 0.12], 'missing open falls back to close');
   assert.equal(p.meta.change, 2);
   assert.equal(p.meta.firstTradeDate, '1980-12-12');
 });
@@ -131,4 +134,45 @@ test('SEC: international filers (IFRS tags, EUR) and derived lines', async () =>
   assert.equal(c.income[0].incomeTax, 40);
   assert.equal(c.balance[0].totalEquity, 800);
   assert.equal(c.cashflow[0].netChangeInCash, 50);
+});
+
+test('real SEC file (Snowflake, public domain) is parsed into complete statements', async () => {
+  const { completeRows } = await import('../server/normalize.mjs');
+  const json = JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/snow_facts.json.gz', import.meta.url))).toString());
+  const r = parseCompanyFacts(json);
+  const c = completeRows({ income: r.income, balance: r.balance, cashflow: r.cashflow });
+  const fy25 = c.income.find((x) => x.fiscalYear === 2025);
+  assert.ok(Math.abs(fy25.revenue / 1e6 - 3626) < 1, 'FY2025 revenue ~ $3,626M');
+  assert.ok(fy25.netIncome < 0);
+  const b25 = c.balance.find((x) => x.fiscalYear === 2025);
+  assert.ok(b25.longTermDebt > 2e9, 'convertible notes are counted as debt');
+  for (const k of ['cash', 'totalAssets', 'totalCurrentLiabilities', 'totalEquity']) assert.ok(b25[k] != null, k);
+  const cf25 = c.cashflow.find((x) => x.fiscalYear === 2025);
+  for (const k of ['operatingCashFlow', 'capitalExpenditure', 'freeCashFlow', 'shareBuybacks', 'stockBasedCompensation']) assert.ok(cf25[k] != null, k);
+});
+
+test('Yahoo annual statements (non-US companies)', () => {
+  const pt = (date, raw) => ({ asOfDate: date, periodType: '12M', currencyCode: 'JPY', reportedValue: { raw } });
+  const r = parseTimeseries({ timeseries: { result: [
+    { meta: { type: ['annualTotalRevenue'] }, annualTotalRevenue: [pt('2023-03-31', 1000), pt('2024-03-31', 1200)] },
+    { meta: { type: ['annualNetIncomeCommonStockholders'] }, annualNetIncomeCommonStockholders: [pt('2024-03-31', 90)] },
+    { meta: { type: ['annualTotalAssets'] }, annualTotalAssets: [null, pt('2024-03-31', 5000)] },
+    { meta: { type: ['annualFreeCashFlow'] } },
+  ] } });
+  assert.equal(r.currency, 'JPY');
+  assert.deepEqual(r.income.map((x) => [x.fiscalYear, x.revenue, x.netIncome]), [[2023, 1000, null], [2024, 1200, 90]]);
+  assert.equal(r.balance.length, 1);
+  assert.equal(r.balance[0].totalAssets, 5000);
+  assert.equal(r.cashflow.length, 0);
+});
+
+test('Yahoo search and profile parsing', () => {
+  const s = parseSearch({ quotes: [{ symbol: '7203.T', longname: 'Toyota Motor Corporation', exchDisp: 'Tokyo', quoteType: 'EQUITY' }, { symbol: 'X', quoteType: 'OPTION' }] });
+  assert.deepEqual(s, [{ symbol: '7203.T', name: 'Toyota Motor Corporation', exchange: 'Tokyo' }]);
+  const p = parseQuoteSummary({ quoteSummary: { result: [{ assetProfile: { longBusinessSummary: 'Cars.', sector: 'Consumer Cyclical', fullTimeEmployees: 380000 },
+    price: { longName: 'Toyota', currency: 'JPY', regularMarketPrice: { raw: 3000 }, marketCap: { raw: 4e13 }, regularMarketChangePercent: { raw: 0.012 } },
+    financialData: { financialCurrency: 'JPY' } }] } });
+  assert.equal(p.description, 'Cars.');
+  assert.equal(p.marketCap, 4e13);
+  assert.ok(Math.abs(p.changePercent - 1.2) < 1e-9);
 });

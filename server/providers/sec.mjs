@@ -4,7 +4,9 @@
 // It has no revenue-segment breakdown and no business description; the site says so when that happens.
 import { completeRows } from '../normalize.mjs';
 
-const ANNUAL_FORMS = new Set(['10-K', '10-K/A', '20-F', '20-F/A', '40-F', '40-F/A', '10-KT']);
+// Annual reports; IPO prospectuses (S-1/F-1) only fill years before the first annual report,
+// because the most recently filed value always wins.
+const ANNUAL_FORMS = new Set(['10-K', '10-K/A', '20-F', '20-F/A', '40-F', '40-F/A', '10-KT', 'S-1', 'S-1/A', 'F-1', 'F-1/A']);
 
 // For each normalized field: the XBRL tags to try, in order of preference.
 const DURATION_TAGS = {
@@ -15,22 +17,22 @@ const DURATION_TAGS = {
   sellingGeneralAdmin: ['SellingGeneralAndAdministrativeExpense'],
   sellingMarketing: ['SellingAndMarketingExpense', 'SellingExpense', 'MarketingExpense'],
   generalAdmin: ['GeneralAndAdministrativeExpense', 'AdministrativeExpense'],
-  operatingExpenses: ['OperatingExpenses', 'CostsAndExpenses'],
+  operatingExpenses: ['OperatingExpenses', 'CostsAndExpenses', 'OperatingExpense'],
   operatingIncome: ['OperatingIncomeLoss', 'ProfitLossFromOperatingActivities'],
   interestExpense: ['InterestExpense', 'InterestExpenseNonoperating', 'InterestExpenseDebt', 'InterestPaidNet', 'InterestAndDebtExpense', 'FinanceCosts'],
   pretaxIncome: ['IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest', 'IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments', 'IncomeLossFromContinuingOperationsBeforeIncomeTaxesDomestic', 'ProfitLossBeforeTax'],
   incomeTax: ['IncomeTaxExpenseBenefit', 'IncomeTaxExpenseContinuingOperations'],
   netIncome: ['NetIncomeLoss', 'ProfitLoss', 'NetIncomeLossAvailableToCommonStockholdersBasic', 'ProfitLossAttributableToOwnersOfParent'],
-  depreciationAmortization: ['DepreciationDepletionAndAmortization', 'DepreciationAmortizationAndAccretionNet', 'DepreciationAndAmortization', 'Depreciation', 'DepreciationAndAmortisationExpense', 'DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss'],
+  depreciationAmortization: ['DepreciationDepletionAndAmortization', 'DepreciationAmortizationAndAccretionNet', 'DepreciationAndAmortization', 'Depreciation', 'DepreciationAndAmortisationExpense', 'AdjustmentsForDepreciationAndAmortisationExpense', 'DepreciationExpense', 'DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss'],
   eps: ['EarningsPerShareBasic', 'BasicEarningsLossPerShare'],
   epsDiluted: ['EarningsPerShareDiluted', 'DilutedEarningsLossPerShare'],
   sharesDiluted: ['WeightedAverageNumberOfDilutedSharesOutstanding', 'AdjustedWeightedAverageShares', 'WeightedAverageNumberOfSharesOutstandingBasic', 'WeightedAverageShares'],
-  operatingCashFlow: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations', 'CashFlowsFromUsedInOperatingActivities'],
+  operatingCashFlow: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations', 'CashFlowsFromUsedInOperatingActivities', 'CashFlowsFromUsedInOperations'],
   capitalExpenditure: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets', 'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities', 'PaymentsToAcquireOtherPropertyPlantAndEquipment'],
   investingCashFlow: ['NetCashProvidedByUsedInInvestingActivities', 'NetCashProvidedByUsedInInvestingActivitiesContinuingOperations', 'CashFlowsFromUsedInInvestingActivities'],
   financingCashFlow: ['NetCashProvidedByUsedInFinancingActivities', 'NetCashProvidedByUsedInFinancingActivitiesContinuingOperations', 'CashFlowsFromUsedInFinancingActivities'],
   dividendsPaid: ['PaymentsOfDividendsCommonStock', 'PaymentsOfDividends', 'DividendsPaidClassifiedAsFinancingActivities', 'PaymentsOfOrdinaryDividends'],
-  shareBuybacks: ['PaymentsForRepurchaseOfCommonStock', 'PaymentsForRepurchaseOfEquity', 'PaymentsToAcquireOrRedeemEntitysShares'],
+  shareBuybacks: ['PaymentsForRepurchaseOfCommonStock', 'PaymentsForRepurchaseOfEquity', 'PaymentsToAcquireOrRedeemEntitysShares', 'PurchaseOfTreasuryShares'],
   stockBasedCompensation: ['ShareBasedCompensation', 'AllocatedShareBasedCompensationExpense'],
   netChangeInCash: ['CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsPeriodIncreaseDecreaseIncludingExchangeRateEffect', 'CashAndCashEquivalentsPeriodIncreaseDecrease', 'IncreaseDecreaseInCashAndCashEquivalents'],
 };
@@ -49,7 +51,7 @@ const INSTANT_TAGS = {
   shortTermDebt: ['LongTermDebtCurrent', 'DebtCurrent', 'LongTermDebtAndCapitalLeaseObligationsCurrent'],
   commercialPaper: ['CommercialPaper', 'ShortTermBorrowings', 'CurrentPortionOfLongtermBorrowings', 'ShorttermBorrowings'],
   totalCurrentLiabilities: ['LiabilitiesCurrent', 'CurrentLiabilities'],
-  longTermDebt: ['LongTermDebtNoncurrent', 'LongTermDebtAndCapitalLeaseObligations', 'LongTermDebt', 'LongTermNotesPayable', 'NoncurrentPortionOfNoncurrentBorrowings', 'LongtermBorrowings'],
+  longTermDebt: ['LongTermDebtNoncurrent', 'LongTermDebtAndCapitalLeaseObligations', 'LongTermDebt', 'LongTermNotesPayable', 'NoncurrentPortionOfNoncurrentBorrowings', 'LongtermBorrowings', 'ConvertibleDebtNoncurrent', 'ConvertibleNotesPayable', 'SeniorNotes', 'LongTermDebtAndFinanceLeasesNoncurrent'],
   totalLiabilities: ['Liabilities'],
   totalEquity: ['StockholdersEquity', 'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest', 'EquityAttributableToOwnersOfParent', 'Equity'],
 };
