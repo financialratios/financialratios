@@ -67,11 +67,16 @@ export function parseChart(json) {
     low.push(r4(typeof q.low?.[i] === 'number' ? q.low[i] : Math.min(o, c)));
     volume.push(typeof q.volume?.[i] === 'number' ? q.volume[i] : 0);
   }
+  // Every dividend paid per share (Yahoo adjusts them for later stock splits).
+  const dividends = Object.values(result.events?.dividends || {})
+    .filter((d) => typeof d.amount === 'number' && d.date)
+    .map((d) => [new Date(d.date * 1000).toISOString().slice(0, 10), Math.round(d.amount * 1e6) / 1e6])
+    .sort((x, y) => x[0].localeCompare(y[0]));
   const m = result.meta || {};
   const price = m.regularMarketPrice ?? close[close.length - 1] ?? null;
   const prev = m.chartPreviousClose ?? m.previousClose ?? (close.length > 1 ? close[close.length - 2] : null);
   return {
-    dates, open, high, low, close, volume,
+    dates, open, high, low, close, volume, dividends,
     meta: {
       price,
       currency: m.currency || null,
@@ -85,7 +90,7 @@ export function parseChart(json) {
 }
 
 export async function yahooChart(symbol, { range = 'max', fetchImpl = fetch } = {}) {
-  const json = await getJson(`${Q1}/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=1d&includePrePost=false&events=split`, fetchImpl);
+  const json = await getJson(`${Q1}/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=1d&includePrePost=false&events=div%2Csplit`, fetchImpl);
   const parsed = parseChart(json);
   if (!parsed || !parsed.dates.length) throw fail(`No price history for "${symbol}"`, 404);
   return parsed;

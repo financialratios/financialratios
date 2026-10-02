@@ -130,7 +130,10 @@ export async function fmpCompany(symbol, key, fetchImpl = fetch) {
 }
 
 export async function fmpPrices(symbol, key, fetchImpl = fetch) {
-  const rows = await get('historical-price-eod/full', { symbol, from: '1960-01-01', to: new Date().toISOString().slice(0, 10) }, key, fetchImpl);
+  const [rows, divs] = await Promise.all([
+    get('historical-price-eod/full', { symbol, from: '1960-01-01', to: new Date().toISOString().slice(0, 10) }, key, fetchImpl),
+    optional(get('dividends', { symbol }, key, fetchImpl)),
+  ]);
   const list = (Array.isArray(rows) ? rows : rows?.historical || [])
     .filter((r) => r.date && typeof (r.close ?? r.price) === 'number')
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -143,6 +146,10 @@ export async function fmpPrices(symbol, key, fetchImpl = fetch) {
     low: list.map((r) => r.low ?? c(r)),
     close: list.map(c),
     volume: list.map((r) => r.volume ?? 0),
+    dividends: (Array.isArray(divs) ? divs : [])
+      .map((d) => [d.date, d.adjDividend ?? d.dividend])
+      .filter(([d, v]) => d && typeof v === 'number' && v > 0)
+      .sort((x, y) => x[0].localeCompare(y[0])),
   };
 }
 

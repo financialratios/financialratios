@@ -11,13 +11,15 @@ export function mottoHtml(extraClass = '') {
 }
 
 const NAV = [
+  ['/', '🏠 Home', ''],
   ['/learn/', 'Learn', 'learn'],
   ['/calculators/', 'Calculators', 'calculators'],
   ['/analyze/', 'Analyze a company', 'analyze'],
+  ['/reviews.html', 'Reviews', 'reviews.html'],
 ];
 
 function header() {
-  const section = location.pathname.split('/')[1];
+  const section = location.pathname.split('/')[1].replace(/^index\.html$/, '');
   const links = NAV.map(([href, text, key]) => `<a href="${href}"${section === key ? ' aria-current="page"' : ''}>${text}</a>`).join('');
   return `<a class="skip" href="#main">Skip to content</a>
   <header class="site-header"><div class="container bar">
@@ -52,6 +54,7 @@ function footer() {
       </ul></div>
       <div><h4>Financial Rat</h4><ul>
         <li><a href="/analyze/">Analyze a company</a></li>
+        <li><a href="/reviews.html">Reviews</a></li>
         <li><a href="/about.html">About</a></li>
         <li><a href="/privacy.html">Privacy policy</a></li>
         <li><a href="/terms.html">Terms &amp; disclaimer</a></li>

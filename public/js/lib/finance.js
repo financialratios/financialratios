@@ -218,26 +218,38 @@ export function historySummary(company) {
   const ni = company.income.map((r) => r.netIncome);
   const eps = company.income.map((r) => r.epsDiluted ?? r.eps);
   const fcf = company.cashflow.map((r) => r.freeCashFlow);
-  const firstIdx = rev.findIndex((v) => isNum(v) && v > 0);
-  const lastIdx = rev.length - 1;
-  const span = lastIdx - firstIdx;
+  const years = company.income.map((r) => r.fiscalYear);
+  // Only years where revenue was actually reported count: a missing year must not break the averages.
+  const valid = rev.map((v, i) => (isNum(v) && v > 0 ? i : -1)).filter((i) => i >= 0);
+  const firstIdx = valid.length ? valid[0] : -1;
+  const lastIdx = valid.length ? valid[valid.length - 1] : -1;
+  const span = firstIdx >= 0 ? years[lastIdx] - years[firstIdx] : 0;
+  // Last 5 years: from the latest reported year back to the reported year closest to 5 years earlier.
+  const start5 = valid.find((i) => years[lastIdx] - years[i] <= 5) ?? firstIdx;
+  const span5 = start5 >= 0 ? years[lastIdx] - years[start5] : 0;
   const g = growthSeries(rev);
   const validGrowth = g.filter(isNum);
+  const between = (arr) => (span > 0 ? cagr(arr[firstIdx], arr[lastIdx], span) : null);
   return {
-    years: company.income.map((r) => r.fiscalYear),
+    years,
     span,
-    revenueCagr: firstIdx >= 0 && span > 0 ? cagr(rev[firstIdx], rev[lastIdx], span) : null,
+    revenueCagr: span > 0 ? cagr(rev[firstIdx], rev[lastIdx], span) : null,
+    revenueCagr5: span5 > 0 ? cagr(rev[start5], rev[lastIdx], span5) : null,
+    cagr5From: start5 >= 0 ? { year: years[start5], value: rev[start5] } : null,
+    cagr5To: lastIdx >= 0 ? { year: years[lastIdx], value: rev[lastIdx] } : null,
+    span5,
     revenueAvgGrowth: average(validGrowth),
     revenueGrowthStdev: stdev(validGrowth),
     revenueDownYears: validGrowth.filter((x) => x < 0).length,
     revenueGrowth: g,
     bestYear: validGrowth.length ? Math.max(...validGrowth) : null,
     worstYear: validGrowth.length ? Math.min(...validGrowth) : null,
-    netIncomeCagr: span > 0 ? cagr(ni[firstIdx], ni[lastIdx], span) : null,
+    netIncomeCagr: between(ni),
     lossYears: ni.filter((x) => isNum(x) && x < 0).length,
-    epsCagr: span > 0 ? cagr(eps[firstIdx], eps[lastIdx], span) : null,
-    fcfCagr: span > 0 ? cagr(fcf[firstIdx], fcf[lastIdx], span) : null,
+    epsCagr: between(eps),
+    fcfCagr: between(fcf),
     avgFcfMargin: average(company.income.map((inc, i) => safeDiv(fcf[i], inc.revenue))),
+    avgFcfMargin5: average(company.income.map((inc, i) => (years[lastIdx] - years[i] < 5 ? safeDiv(fcf[i], inc.revenue) : null))),
   };
 }
 
@@ -329,4 +341,36 @@ export function splitAdjustedIncome(income) {
     }
   }
   return out;
+}
+
+/**
+ * Dividends per share added up by calendar year, from a list of [date, amount] payments.
+ * Also: first year paid, consecutive years of increases (ignoring the unfinished current year)
+ * and the yearly growth over the last 10 complete years.
+ */
+export function dividendHistory(payments, today = new Date()) {
+  const byYear = new Map();
+  for (const [date, amount] of payments || []) {
+    const y = Number(String(date).slice(0, 4));
+    if (Number.isFinite(y) && isNum(amount)) byYear.set(y, (byYear.get(y) || 0) + amount);
+  }
+  const thisYear = today.getFullYear();
+  const years = [...byYear.keys()].sort((a, b) => a - b);
+  const rows = years.map((y) => ({ year: y, amount: byYear.get(y), partial: y === thisYear }));
+  const full = rows.filter((r) => !r.partial);
+  let streak = 0;
+  for (let i = full.length - 1; i > 0; i--) {
+    if (full[i].year - full[i - 1].year === 1 && full[i].amount > full[i - 1].amount * 1.0001) streak++;
+    else break;
+  }
+  const last = full[full.length - 1];
+  const tenAgo = last ? full.find((r) => r.year === last.year - 10) : null;
+  return {
+    rows,
+    firstYear: years[0] ?? null,
+    lastFullYear: last?.year ?? null,
+    lastFullAmount: last?.amount ?? null,
+    increaseStreak: streak,
+    cagr10: last && tenAgo ? cagr(tenAgo.amount, last.amount, 10) : null,
+  };
 }

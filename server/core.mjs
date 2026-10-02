@@ -10,6 +10,7 @@ import { fmpCompany, fmpPrices, fmpSearch } from './providers/fmp.mjs';
 import { secCompany, secSearch } from './providers/sec.mjs';
 import { yahooChart, yahooCompany, yahooFx, yahooProfile, yahooSearch } from './providers/yahoo.mjs';
 import { demoCompany, demoPrices } from './demo.mjs';
+import { handleReviews } from './reviews.mjs';
 
 const SYMBOL_RE = /^[A-Za-z0-9.\-^=]{1,20}$/;
 const cache = new Map();
@@ -98,7 +99,7 @@ async function getPrices(symbol, cfg) {
     if (p?.dates.length) return p;
   }
   const c = await yahooChart(symbol, { range: 'max' });
-  return { source: 'Yahoo Finance', dates: c.dates, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume };
+  return { source: 'Yahoo Finance', dates: c.dates, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume, dividends: c.dividends };
 }
 
 async function search(q, cfg) {
@@ -125,11 +126,19 @@ function json(status, body, maxAge = 0) {
   };
 }
 
-/** @param {URL} url  @param {Record<string,string|undefined>} env */
-export async function handleApi(url, env = process.env) {
+/**
+ * @param {URL} url
+ * @param {Record<string,string|undefined>} env
+ * @param {{method?: string, body?: string, ip?: string}} req
+ */
+export async function handleApi(url, env = process.env, req = {}) {
   const cfg = config(env);
   const route = url.pathname.replace(/\/+$/, '').split('/').pop();
   try {
+    if (route === 'reviews') {
+      const [status, body] = await handleReviews({ method: req.method || 'GET', url, body: req.body, ip: req.ip, env });
+      return json(status, body);
+    }
     if (route === 'search') {
       const q = (url.searchParams.get('q') || '').trim();
       if (!q || q.length > 40) return json(400, { error: 'Type a ticker or company name.' });
