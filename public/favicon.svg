@@ -1,28 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Financial Rat logo">
   <rect width="64" height="64" rx="16" fill="#0e9f6e"/>
-  <!-- rising chart line, like a tail -->
-  <path d="M7 57 L16 52 L23 54.5 L31 50" fill="none" stroke="#f5b83d" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M41 50 L49 46 L57 42" fill="none" stroke="#f5b83d" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M52.5 41.2 L57 42 L56 46.4" fill="none" stroke="#f5b83d" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- ears -->
-  <circle cx="18" cy="17.5" r="9" fill="#e9eef3"/>
-  <circle cx="18" cy="17.5" r="5.6" fill="#f7a9be"/>
-  <circle cx="46" cy="17.5" r="9" fill="#e9eef3"/>
-  <circle cx="46" cy="17.5" r="5.6" fill="#f7a9be"/>
-  <!-- head -->
-  <ellipse cx="32" cy="33" rx="16.5" ry="15" fill="#f4f7fa"/>
-  <ellipse cx="32" cy="40.5" rx="8.5" ry="6.2" fill="#ffffff"/>
-  <!-- eyes with a sparkle -->
-  <circle cx="25" cy="31" r="3.3" fill="#0f1b2d"/>
-  <circle cx="39" cy="31" r="3.3" fill="#0f1b2d"/>
-  <circle cx="26.2" cy="29.8" r="1.15" fill="#fff"/>
-  <circle cx="40.2" cy="29.8" r="1.15" fill="#fff"/>
-  <!-- rosy cheeks -->
-  <ellipse cx="20.5" cy="38" rx="3" ry="2" fill="#f7a9be" opacity=".65"/>
-  <ellipse cx="43.5" cy="38" rx="3" ry="2" fill="#f7a9be" opacity=".65"/>
-  <!-- nose and smile -->
-  <ellipse cx="32" cy="37.6" rx="2.6" ry="1.9" fill="#ef7f9d"/>
-  <path d="M28.6 41.2 Q32 44.6 35.4 41.2" fill="none" stroke="#0f1b2d" stroke-width="1.4" stroke-linecap="round"/>
-  <!-- whiskers -->
-  <path d="M23 39.5 L13.5 37.5 M23 41.5 L14 43 M41 39.5 L50.5 37.5 M41 41.5 L50 43" stroke="#0f1b2d" stroke-width="1" stroke-linecap="round" opacity=".35"/>
+  <path d="M7 55 L17 48 L25 52 L35 44 L44 47 L57 37" fill="none" stroke="#f5a524" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M51 35.5 L57 37 L55.2 42.6" fill="none" stroke="#f5a524" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="24" cy="17" r="8.5" fill="#fff"/>
+  <circle cx="24" cy="17" r="4.6" fill="#f6a8bd"/>
+  <path d="M13 29 C13 20 22 15.5 32 18.5 L48 26 C50.5 27.2 50.5 29.8 48 31 L32 37 C22 40.5 13 37 13 29 Z" fill="#fff"/>
+  <circle cx="31" cy="25.5" r="2.6" fill="#0f1b2d"/>
+  <circle cx="31.9" cy="24.6" r=".8" fill="#fff"/>
+  <circle cx="49.2" cy="28.5" r="2.6" fill="#f6a8bd"/>
+  <path d="M42 30.5 L52 34 M41.5 32.5 L50 37.5" stroke="#0f1b2d" stroke-width="1.1" stroke-linecap="round" opacity=".55"/>
 </svg>

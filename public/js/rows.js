@@ -79,3 +79,83 @@ export const RATIO_ROWS = [
   { key: 'capexToRevenue', label: 'Capex / revenue', fmt: 'pct', explain: 'Investment in long-term assets per $1 of sales.' },
   { key: 'payoutRatio', label: 'Dividend payout ratio', fmt: 'pct', explain: 'Share of profit paid as dividends.' },
 ];
+
+// ---------- Download layouts, structured like Yahoo Finance ----------
+// Each line: { label, f (field) | calc (row => number|null), level (0 section, 1, 2 = indented), bold, kind }
+// kind: 'money' (shown in thousands), 'pershare' (shown as is), 'shares' (thousands of shares).
+const n = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const sub = (a, ...bs) => (n(a) == null || bs.some((b) => n(b) == null) ? null : bs.reduce((x, b) => x - b, a));
+const minusKnown = (total, ...parts) => (n(total) == null || parts.every((p) => n(p) == null) ? null : parts.reduce((x, p) => x - (n(p) || 0), total));
+
+export const INCOME_LAYOUT = [
+  { label: 'Total Revenue', f: 'revenue', level: 0, bold: true },
+  { label: 'Cost of Revenue', f: 'costOfRevenue', level: 1 },
+  { label: 'Gross Profit', f: 'grossProfit', level: 0, bold: true },
+  { label: 'Operating Expense', calc: (r) => sub(r.grossProfit, r.operatingIncome) ?? n(r.operatingExpenses), level: 0, bold: true },
+  { label: 'Selling, General & Administrative', f: 'sellingGeneralAdmin', level: 1 },
+  { label: 'Research & Development', f: 'researchAndDevelopment', level: 1 },
+  { label: 'Operating Income', f: 'operatingIncome', level: 0, bold: true },
+  { label: 'Interest Expense', f: 'interestExpense', level: 1 },
+  { label: 'Other Income / Expense (net, incl. interest)', calc: (r) => sub(r.pretaxIncome, r.operatingIncome), level: 1 },
+  { label: 'Pretax Income', f: 'pretaxIncome', level: 0, bold: true },
+  { label: 'Tax Provision', f: 'incomeTax', level: 1 },
+  { label: 'Net Income', f: 'netIncome', level: 0, bold: true },
+  { label: 'Basic EPS', f: 'eps', level: 0, kind: 'pershare' },
+  { label: 'Diluted EPS', f: 'epsDiluted', level: 0, kind: 'pershare' },
+  { label: 'Diluted Average Shares', f: 'sharesDiluted', level: 0, kind: 'shares' },
+  { label: 'EBIT', f: 'operatingIncome', level: 0 },
+  { label: 'Depreciation & Amortization', f: 'depreciationAmortization', level: 1 },
+  { label: 'EBITDA', f: 'ebitda', level: 0, bold: true },
+];
+
+export const BALANCE_LAYOUT = [
+  { label: 'Total Assets', f: 'totalAssets', level: 0, bold: true },
+  { label: 'Current Assets', f: 'totalCurrentAssets', level: 1, bold: true },
+  { label: 'Cash & Cash Equivalents', f: 'cash', level: 2 },
+  { label: 'Short-Term Investments', f: 'shortTermInvestments', level: 2 },
+  { label: 'Receivables', f: 'receivables', level: 2 },
+  { label: 'Inventory', f: 'inventory', level: 2 },
+  { label: 'Other Current Assets', calc: (r) => minusKnown(r.totalCurrentAssets, r.cash, r.shortTermInvestments, r.receivables, r.inventory), level: 2 },
+  { label: 'Total Non-Current Assets', calc: (r) => sub(r.totalAssets, r.totalCurrentAssets), level: 1, bold: true },
+  { label: 'Net Property, Plant & Equipment', f: 'propertyPlantEquipment', level: 2 },
+  { label: 'Goodwill & Intangible Assets', f: 'goodwillIntangibles', level: 2 },
+  { label: 'Other Non-Current Assets', calc: (r) => minusKnown(sub(r.totalAssets, r.totalCurrentAssets), r.propertyPlantEquipment, r.goodwillIntangibles), level: 2 },
+  { label: 'Total Liabilities', f: 'totalLiabilities', level: 0, bold: true },
+  { label: 'Current Liabilities', f: 'totalCurrentLiabilities', level: 1, bold: true },
+  { label: 'Accounts Payable', f: 'accountsPayable', level: 2 },
+  { label: 'Current Debt', f: 'shortTermDebt', level: 2 },
+  { label: 'Other Current Liabilities', calc: (r) => minusKnown(r.totalCurrentLiabilities, r.accountsPayable, r.shortTermDebt), level: 2 },
+  { label: 'Total Non-Current Liabilities', calc: (r) => sub(r.totalLiabilities, r.totalCurrentLiabilities), level: 1, bold: true },
+  { label: 'Long-Term Debt', f: 'longTermDebt', level: 2 },
+  { label: 'Other Non-Current Liabilities', calc: (r) => minusKnown(sub(r.totalLiabilities, r.totalCurrentLiabilities), r.longTermDebt), level: 2 },
+  { label: "Total Shareholders' Equity", f: 'totalEquity', level: 0, bold: true },
+  { spacer: true },
+  { label: 'Total Debt', f: 'totalDebt', level: 0 },
+  { label: 'Net Debt (debt − cash & short-term investments)', calc: (r) => (n(r.totalDebt) == null ? null : r.totalDebt - (n(r.cash) || 0) - (n(r.shortTermInvestments) || 0)), level: 0 },
+  { label: 'Working Capital (current assets − current liabilities)', calc: (r) => sub(r.totalCurrentAssets, r.totalCurrentLiabilities), level: 0 },
+  { label: 'Tangible Book Value (equity − goodwill & intangibles)', calc: (r) => sub(r.totalEquity, n(r.goodwillIntangibles) ?? 0), level: 0 },
+  { label: 'Total Capitalization (equity + long-term debt)', calc: (r) => (n(r.totalEquity) == null ? null : r.totalEquity + (n(r.longTermDebt) || 0)), level: 0 },
+];
+
+export const CASHFLOW_LAYOUT = [
+  { label: 'Operating Cash Flow', f: 'operatingCashFlow', level: 0, bold: true },
+  { label: 'Net Income', f: 'netIncome', level: 1 },
+  { label: 'Depreciation & Amortization', f: 'depreciationAmortization', level: 1 },
+  { label: 'Stock-Based Compensation', f: 'stockBasedCompensation', level: 1 },
+  { label: 'Working Capital Changes & Other', calc: (r) => minusKnown(r.operatingCashFlow, r.netIncome, r.depreciationAmortization, r.stockBasedCompensation), level: 1 },
+  { label: 'Investing Cash Flow', f: 'investingCashFlow', level: 0, bold: true },
+  { label: 'Capital Expenditure', f: 'capitalExpenditure', level: 1 },
+  { label: 'Acquisitions, Investments & Other', calc: (r) => minusKnown(r.investingCashFlow, r.capitalExpenditure), level: 1 },
+  { label: 'Financing Cash Flow', f: 'financingCashFlow', level: 0, bold: true },
+  { label: 'Cash Dividends Paid', f: 'dividendsPaid', level: 1 },
+  { label: 'Repurchase of Capital Stock', f: 'shareBuybacks', level: 1 },
+  { label: 'Debt Issued / Repaid & Other', calc: (r) => minusKnown(r.financingCashFlow, r.dividendsPaid, r.shareBuybacks), level: 1 },
+  { label: 'Changes in Cash', f: 'netChangeInCash', level: 0, bold: true },
+  { spacer: true },
+  { label: 'Free Cash Flow (operating cash flow − capex)', f: 'freeCashFlow', level: 0, bold: true },
+];
+
+/** Value of one layout line for one year (null when the inputs were not reported). */
+export function layoutValue(line, row) {
+  return line.calc ? line.calc(row) : n(row[line.f]);
+}
