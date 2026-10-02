@@ -172,9 +172,10 @@ function render(c) {
       <div class="seg-btns" id="chart-type"><button data-type="candle" class="active">🕯️ Candles</button><button data-type="line">Line</button></div></div>
     <div class="range-btns" id="range-btns" style="margin-top:12px">${['1M', '6M', '1Y', '5Y', '10Y', 'MAX'].map((r) => `<button data-r="${r}">${r === 'MAX' ? 'Since IPO' : r}</button>`).join('')}
       <label class="check small" style="margin-left:8px"><input type="checkbox" id="log-scale"> Log scale</label></div>
-    <div class="card" style="margin-top:12px"><div class="chart-box tall" id="c-price" aria-label="Daily share price candles"><div class="spinner" id="price-spin" style="position:absolute;inset:0;margin:auto"></div></div>
-      <div class="stats" id="price-stats"></div>
-      <details class="small muted"><summary style="cursor:pointer;font-weight:700">How to read a candle 🕯️</summary>
+    <div class="card" style="margin-top:12px"><div class="split price-split">
+      <div class="chart-box tall" id="c-price" aria-label="Daily share price candles"><div class="spinner" id="price-spin" style="position:absolute;inset:0;margin:auto"></div></div>
+      <div class="stats stack" id="price-stats"></div></div>
+      <details class="small muted" style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">How to read a candle 🕯️</summary>
         <p style="margin:8px 0 0">Each candle is one trading day. The thick body runs from the <b>opening</b> price to the <b>closing</b> price:
         <span class="up"><b>green</b></span> if the price closed higher than it opened, <span class="down"><b>red</b></span> if lower.
         The thin lines (wicks) show the day's <b>highest</b> and <b>lowest</b> prices. The bars at the bottom show how many shares changed hands (volume).
@@ -184,7 +185,7 @@ function render(c) {
   <section class="az-section" id="overview">
     <h2>Overview</h2>
     <div id="story"></div>
-    <div class="kpis">
+    <div class="split ov-split"><div class="kpis">
       ${kpi('Market value', compact(val.marketCap, cur), 'price × shares')}
       ${kpi(`Revenue FY${last.fiscalYear}`, compact(last.revenue, cur), `${signedPct(hist.revenueGrowth[hist.revenueGrowth.length - 1])} vs year before`)}
       ${kpi(`Net income FY${last.fiscalYear}`, compact(last.netIncome, cur), `net margin ${pct(ratios[ratios.length - 1].netMargin)}`)}
@@ -194,23 +195,25 @@ function render(c) {
       ${kpi('Dividend yield', pct(val.dividendYield, 2), 'last year\'s dividends ÷ price')}
       ${kpi(`Revenue growth, ${c.income.length}-yr history`, pct(hist.revenueCagr), `avg per year, FY${c.income[0].fiscalYear}–FY${last.fiscalYear}`)}
     </div>
-    <h3>The facts at a glance</h3>
-    <div id="glance">${glance(c, hist, ratios, val, cur)}</div>
+    <div class="card glance-card"><h3 style="margin-top:0">📌 The facts at a glance</h3>
+    <div id="glance">${glance(c, hist, ratios, val, cur)}</div></div></div>
   </section>
 
   <section class="az-section" id="business">
     <h2>The business</h2>
     <div class="facts" id="facts"></div>
     <div class="biz-grid">
-      <div class="card biz-about">
-        <h3 style="margin-top:0">🏢 What does ${escapeHtml(p.name)} do?</h3>
-        <div id="about-text"></div>
+      <div class="col-stack">
+        <div class="card biz-about">
+          <h3 style="margin-top:0">🏢 What does ${escapeHtml(p.name)} do?</h3>
+          <div id="about-text"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">🧾 Where every ${escapeHtml(cur === 'USD' ? '$' : '')}100 of sales goes <span class="muted small" style="font-weight:600">(FY${last.fiscalYear})</span></h3>
+          <div id="money-flow"></div>
+        </div>
       </div>
       <div class="card" id="segments"></div>
-    </div>
-    <div class="card" style="margin-top:20px">
-      <h3 style="margin-top:0">🧾 Where every ${escapeHtml(cur === 'USD' ? '$' : '')}100 of sales goes <span class="muted small" style="font-weight:600">(FY${last.fiscalYear})</span></h3>
-      <div id="money-flow"></div>
     </div>
   </section>
 
@@ -227,15 +230,15 @@ function render(c) {
     <div class="toolbar"><h2 style="margin:0">Financial statements</h2>
       <div class="seg-btns" id="st-btns"><button data-st="income" class="active">Income statement</button><button data-st="balance">Balance sheet</button><button data-st="cashflow">Cash flow</button></div></div>
     <p class="muted small">In ${escapeHtml(cur)} millions, except per-share figures. Negative numbers in (brackets). New to this? <a href="/learn/income-statement.html">Learn to read statements →</a></p>
-    <div class="card"><div class="chart-box"><canvas id="c-statement"></canvas></div></div>
-    <div id="st-explain" style="margin-top:12px"></div>
+    <div class="split st-split"><div class="card"><div class="chart-box"><canvas id="c-statement"></canvas></div></div>
+    <div class="card"><h3 style="margin-top:0">📌 What the numbers say</h3><div id="st-explain"></div></div></div>
     <div class="table-wrap" id="st-table" style="margin-top:12px"></div>
   </section>
 
   <section class="az-section" id="ratios">
     <h2>Ratios over ${c.income.length} years</h2>
-    <p class="muted small">What each ratio means is written under its name and explained in the <a href="/learn/ratios.html">ratios lesson</a>.</p>
-    <div class="grid grid-2">
+    <p class="muted small">Point at (or tap) ⓘ next to a ratio to see what it means; more in the <a href="/learn/ratios.html">ratios lesson</a>.</p>
+    <div class="grid grid-2 four-up">
       <div class="card"><h3 style="margin-top:0">Profit margins</h3><div class="chart-box short"><canvas id="c-margins"></canvas></div></div>
       <div class="card"><h3 style="margin-top:0">Returns on capital</h3><div class="chart-box short"><canvas id="c-returns"></canvas></div></div>
       <div class="card"><h3 style="margin-top:0">Debt / equity</h3><div class="chart-box short"><canvas id="c-debt"></canvas></div></div>
@@ -248,15 +251,15 @@ function render(c) {
 
   <section class="az-section" id="valuation">
     <h2>Valuation</h2>
-    <p class="muted small">Today's price compared with the latest annual results (FY${last.fiscalYear}). Learn what each multiple means in <a href="/learn/valuation.html">lesson 5</a>.</p>
-    <div class="kpis">
+    <p class="muted small">Today's price compared with the latest annual results (FY${last.fiscalYear}). Learn what each multiple means in the <a href="/learn/valuation.html">multiples lesson</a>.</p>
+    <div class="split val-split"><div class="kpis">
       ${kpi('P/E', times(val.pe), 'price per $1 of profit')}${kpi('Earnings yield', pct(val.earningsYield), 'profit ÷ market value')}
       ${kpi('P/S', times(val.ps), 'market value ÷ revenue')}${kpi('P/B', times(val.pb), 'market value ÷ equity')}
       ${kpi('EV / EBITDA', times(val.evEbitda), 'enterprise value ÷ EBITDA')}${kpi('EV / Sales', times(val.evSales), 'enterprise value ÷ revenue')}
       ${kpi('FCF yield', pct(val.fcfYield), 'free cash flow ÷ market value')}${kpi('Enterprise value', compact(val.enterpriseValue, cur), `market value ${val.netDebt >= 0 ? '+' : '−'} net debt ${compact(Math.abs(val.netDebt), cur)}`)}
     </div>
-    <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Multiples at each past fiscal year-end</h3>
-      <div class="chart-box"><canvas id="c-multiples"></canvas></div><div id="multiples-text"></div></div>
+    <div class="card"><h3 style="margin-top:0">Multiples at each past fiscal year-end</h3>
+      <div class="chart-box short"><canvas id="c-multiples"></canvas></div><div id="multiples-text"></div></div></div>
   </section>
 
   <section class="az-section" id="dcf">
@@ -264,7 +267,7 @@ function render(c) {
     <p class="muted">A DCF estimates what the business could be worth from the cash it may produce. The starting assumptions come from the company's <b>own history</b>;
       move the sliders to test your own. Built like the <a href="/learn/dcf.html">DCF lesson</a>, simplified, with one refinement: growth fades in a straight line from year 6 to year 10 towards the long-term rate.</p>
     <div class="dcf-grid">
-      <form class="card calc-form" id="dcf-form" onsubmit="return false"></form>
+      <div class="col-stack"><form class="card calc-form" id="dcf-form" onsubmit="return false"></form><div class="card" id="dcf-sens"></div></div>
       <div id="dcf-out"></div>
     </div>
   </section>
@@ -279,6 +282,7 @@ function render(c) {
           <div class="range-btns" id="wi-quick" style="margin-top:8px"><button type="button" data-y="1">1 year ago</button><button type="button" data-y="5">5 years</button><button type="button" data-y="10">10 years</button><button type="button" data-y="0">At listing</button></div></div>
         <label class="check"><input type="checkbox" id="wi-reinvest" checked> Reinvest dividends in more shares</label>
         <p class="hint" style="margin:0">Taxes, fees and currency changes are not included.</p>
+        <div class="stats" id="wi-stats" style="margin:0"></div>
       </form>
       <div id="wi-out"><div class="spinner"></div><p class="center muted">Waiting for the price history…</p></div>
     </div>
@@ -428,8 +432,8 @@ function renderStatement(kind) {
   const perShare = new Set(['eps', 'epsDiluted']);
   const totals = new Set(['grossProfit', 'operatingIncome', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity', 'operatingCashFlow', 'freeCashFlow']);
   const cell = (field, v) => (perShare.has(field) ? (isNum(v) ? plain(v) : DASH) : millions(v));
-  $('#st-table').innerHTML = `<table><thead><tr><th>${kind === 'income' ? 'Income statement' : kind === 'balance' ? 'Balance sheet' : 'Cash flow statement'}</th>${years.map((y) => `<th>${y}</th>`).join('')}<th style="text-align:left">→ What it is</th></tr></thead>
-    <tbody>${rows.filter(([f]) => data.some((r) => isNum(r[f]))).map(([f, label, ex]) => `<tr class="${totals.has(f) ? 'total' : ''}"><td>${label}</td>${data.map((r) => `<td class="${isNum(r[f]) && r[f] < 0 ? 'neg' : ''}">${cell(f, r[f])}</td>`).join('')}<td style="text-align:left;white-space:normal;min-width:240px;color:var(--ink-2);font-size:.85rem">${ex}</td></tr>`).join('')}</tbody></table>`;
+  $('#st-table').innerHTML = `<table class="rt compact"><thead><tr><th>${kind === 'income' ? 'Income statement' : kind === 'balance' ? 'Balance sheet' : 'Cash flow statement'}</th>${years.map((y) => `<th>${y}</th>`).join('')}</tr></thead>
+    <tbody>${rows.filter(([f]) => data.some((r) => isNum(r[f]))).map(([f, label, ex]) => `<tr class="${totals.has(f) ? 'total' : ''}"><td title="${ex}"><span class="rname">${label} <span class="info" aria-label="${ex}">ⓘ</span></span></td>${data.map((r) => `<td class="${isNum(r[f]) && r[f] < 0 ? 'neg' : ''}">${cell(f, r[f])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   $('#st-table').scrollLeft = 0;
 
   const m = (k) => data.map((r) => (isNum(r[k]) ? r[k] : null));
@@ -446,19 +450,45 @@ function renderStatement(kind) {
     const fl = firstLast('netIncome');
     exp.innerHTML = arrow(`Net income went from ${words(fl?.[0].netIncome, cur)} (FY${fl?.[0].fiscalYear}) to ${words(fl?.[1].netIncome, cur)} (FY${fl?.[1].fiscalYear}).
       ${isNum(state.hist.netIncomeCagr) ? `That is ${pct(state.hist.netIncomeCagr)} a year on average, compared with ${pct(state.hist.revenueCagr)} for revenue.` : ''}
-      ${g.filter(isNum).length ? `Profit changed by ${signedPct(g[g.length - 1])} in the latest year.` : ''}`);
+      ${g.filter(isNum).length ? `Profit changed by ${signedPct(g[g.length - 1])} in the latest year.` : ''}`)
+      + marginFacts(data);
   } else if (kind === 'balance') {
     barChart(canvas, years, [{ label: 'Total assets', data: m('totalAssets'), color: pal.series[1] }, { label: 'Total liabilities', data: m('totalLiabilities'), color: pal.series[4] }, { label: "Shareholders' equity", data: m('totalEquity'), color: pal.series[0] }], { yFormat: fmt });
     const b = data[data.length - 1];
     exp.innerHTML = arrow(`At the end of FY${b.fiscalYear} the company owned ${words(b.totalAssets, cur)} of assets and owed ${words(b.totalLiabilities, cur)},
-      leaving ${words(b.totalEquity, cur)} for shareholders. ${isNum(b.totalDebt) ? `Of what it owed, ${words(b.totalDebt, cur)} was borrowed money (debt).` : ''}`);
+      leaving ${words(b.totalEquity, cur)} for shareholders. ${isNum(b.totalDebt) ? `Of what it owed, ${words(b.totalDebt, cur)} was borrowed money (debt).` : ''}`)
+      + balanceFacts(data);
   } else {
     barChart(canvas, years, [{ label: 'Cash from operations', data: m('operatingCashFlow'), color: pal.series[1] }, { label: 'Capital expenditure', data: m('capitalExpenditure'), color: pal.series[2] }, { label: 'Free cash flow', data: m('freeCashFlow'), color: pal.series[0] }], { yFormat: fmt });
     const total = (k) => data.reduce((s, r) => s + (isNum(r[k]) ? r[k] : 0), 0);
     exp.innerHTML = arrow(`Over these ${data.length} years the company generated ${words(total('freeCashFlow'), cur)} of free cash flow in total.
-      It used ${words(Math.abs(total('dividendsPaid')), cur)} for dividends and ${words(Math.abs(total('shareBuybacks')), cur)} for share buybacks.`);
+      It used ${words(Math.abs(total('dividendsPaid')), cur)} for dividends and ${words(Math.abs(total('shareBuybacks')), cur)} for share buybacks.`)
+      + cashFacts(data);
   }
 }
+
+
+// Extra plain-language facts for the "What the numbers say" card.
+function marginFacts(data) {
+  const first = data.find((r) => isNum(r.revenue) && r.revenue > 0), last = [...data].reverse().find((r) => isNum(r.revenue) && r.revenue > 0);
+  if (!first || !last) return '';
+  const gm = (r) => safeMargin(r.grossProfit, r.revenue), om = (r) => safeMargin(r.operatingIncome, r.revenue);
+  return (isNum(gm(last)) ? arrow(`Gross margin: <b>${pct(gm(last))}</b> in FY${last.fiscalYear}${isNum(gm(first)) ? ` (FY${first.fiscalYear}: ${pct(gm(first))})` : ''}: the share of each sale left after direct costs.`) : '')
+    + (isNum(om(last)) ? arrow(`Operating margin: <b>${pct(om(last))}</b> in FY${last.fiscalYear}${isNum(om(first)) ? ` (FY${first.fiscalYear}: ${pct(om(first))})` : ''}: profit from the core business per 100 of sales.`) : '');
+}
+function balanceFacts(data) {
+  const cur = state.cur, b = data[data.length - 1], a = data[0];
+  const cashNow = (b.cash || 0) + (b.shortTermInvestments || 0), cashThen = (a.cash || 0) + (a.shortTermInvestments || 0);
+  return arrow(`Cash and short-term investments: <b>${words(cashNow, cur)}</b>, compared with ${words(cashThen, cur)} in FY${a.fiscalYear}.`)
+    + (isNum(b.totalEquity) && isNum(a.totalEquity) ? arrow(`Shareholders' equity went from ${words(a.totalEquity, cur)} to <b>${words(b.totalEquity, cur)}</b>.`) : '');
+}
+function cashFacts(data) {
+  const cur = state.cur, l = data[data.length - 1];
+  return (isNum(l.operatingCashFlow) && isNum(l.capitalExpenditure) && l.operatingCashFlow > 0
+    ? arrow(`In FY${l.fiscalYear}, <b>${pct(Math.abs(l.capitalExpenditure) / l.operatingCashFlow, 0)}</b> of the cash from operations was reinvested in equipment and buildings (capex).`) : '')
+    + (isNum(l.freeCashFlow) ? arrow(`Free cash flow in FY${l.fiscalYear}: <b>${words(l.freeCashFlow, cur)}</b>.`) : '');
+}
+const safeMargin = (a, b) => (isNum(a) && isNum(b) && b > 0 ? a / b : null);
 
 // ---------- Ratios ----------
 function fmtRatio(v, f) { return f === 'pct' ? pct(v) : f === 'x1' ? times(v) : times(v, 2); }
@@ -466,9 +496,9 @@ function ratioTable(ratios) {
   const rows = ratios; // oldest to newest
   const cols = rows.length + 2;
   const cell = (v, f) => (isNum(v) ? fmtRatio(v, f) : '<span class="na" title="Not reported, or not meaningful (e.g. negative profit or equity)">—</span>');
-  return `<table class="rt"><thead><tr><th>Ratio</th>${rows.map((y) => `<th>FY${y.fiscalYear}</th>`).join('')}<th>Average</th></tr></thead><tbody>
-    ${RATIO_ROWS.map((r) => (r.group ? `<tr class="grp"><td colspan="${cols}">${r.group}</td></tr>`
-    : `<tr><td><span class="rname">${r.label}</span><span class="rexp">${r.explain}</span></td>${rows.map((y) => `<td class="${isNum(y[r.key]) && y[r.key] < 0 ? 'neg' : ''}">${cell(y[r.key], r.fmt)}</td>`).join('')}<td><b>${cell(average(ratios.map((y) => y[r.key])), r.fmt)}</b></td></tr>`)).join('')}
+  return `<table class="rt compact"><thead><tr><th>Ratio</th>${rows.map((y) => `<th>FY${y.fiscalYear}</th>`).join('')}<th>Average</th></tr></thead><tbody>
+    ${RATIO_ROWS.map((r) => (r.group ? `<tr class="grp"><td colspan="${cols}"><span class="grp-label">${r.group}</span></td></tr>`
+    : `<tr><td title="${r.explain}"><span class="rname">${r.label} <span class="info" aria-label="${r.explain}">ⓘ</span></span></td>${rows.map((y) => `<td class="${isNum(y[r.key]) && y[r.key] < 0 ? 'neg' : ''}">${cell(y[r.key], r.fmt)}</td>`).join('')}<td><b>${cell(average(ratios.map((y) => y[r.key])), r.fmt)}</b></td></tr>`)).join('')}
   </tbody></table>`;
 }
 
@@ -690,20 +720,21 @@ function renderDcf(c, hist, val) {
         ${stat('Equity value', compact(r.equityValue, cur))}${stat('Shares', isNum(shares) ? `${(shares / 1e6).toLocaleString('en-US', { maximumFractionDigits: 0 })}M` : DASH)}
         ${stat('Share of value after year 10', pct(r.terminalShare, 0))}
       </div>
-      <div class="card"><h3 style="margin-top:0">Revenue and free cash flow: history and projection</h3><div class="chart-box"><canvas id="c-dcf"></canvas></div></div>
-      <h3>Sensitivity: value per share</h3>
-      <div class="table-wrap"><table class="sens"><thead><tr><th>Discount ↓ / growth →</th>${[-4, -2, 0, 2, 4].map((dg) => `<th>${(v.growth + dg).toFixed(1)}%</th>`).join('')}</tr></thead><tbody>
-        ${[-2, -1, 0, 1, 2].map((dd) => `<tr><td>${(v.discount + dd).toFixed(2)}%</td>${[-4, -2, 0, 2, 4].map((dg) => {
-    const x = run(v.growth + dg, v.discount + dd);
-    return `<td class="${dd === 0 && dg === 0 ? 'mid' : ''}">${x && !x.error && isNum(x.perShare) ? money(x.perShare, pcur) : DASH}</td>`;
-  }).join('')}</tr>`).join('')}
-      </tbody></table></div>
+      <div class="card"><h3 style="margin-top:0">Revenue and free cash flow: history and projection</h3><div class="chart-box tall"><canvas id="c-dcf"></canvas></div></div>
+
       <details class="card" style="margin-top:16px"><summary style="cursor:pointer;font-weight:800">See the year-by-year projection</summary>
         <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Year</th><th>Growth</th><th>Revenue</th><th>Free cash flow</th><th>Value today</th></tr></thead><tbody>
         ${r.rows.map((x) => `<tr><td>${lastInc.fiscalYear + x.year}</td><td>${pct(x.growth)}</td><td>${compact(x.revenue, cur)}</td><td>${compact(x.fcf, cur)}</td><td>${compact(x.pv, cur)}</td></tr>`).join('')}
         <tr class="total"><td>After ${lastInc.fiscalYear + 10}</td><td>${pct(v.terminal / 100)}</td><td></td><td>Terminal value ${compact(r.terminalValue, cur)}</td><td>${compact(r.pvTerminal, cur)}</td></tr>
         </tbody></table></div></details>
       ${arrow('The model is only as good as its assumptions. Using the company\'s history as the starting point is a neutral choice, not a forecast: the past does not guarantee the future.')}`;
+    $('#dcf-sens').innerHTML = `<h3 style="margin-top:0">🎯 Sensitivity: value per share</h3><p class="small muted" style="margin-top:0">How the result changes with the discount rate (rows) and growth (columns).</p>
+      <div class="table-wrap"><table class="sens"><thead><tr><th>Discount ↓ / growth →</th>${[-4, -2, 0, 2, 4].map((dg) => `<th>${(v.growth + dg).toFixed(1)}%</th>`).join('')}</tr></thead><tbody>
+        ${[-2, -1, 0, 1, 2].map((dd) => `<tr><td>${(v.discount + dd).toFixed(2)}%</td>${[-4, -2, 0, 2, 4].map((dg) => {
+    const x = run(v.growth + dg, v.discount + dd);
+    return `<td class="${dd === 0 && dg === 0 ? 'mid' : ''}">${x && !x.error && isNum(x.perShare) ? money(x.perShare, pcur) : DASH}</td>`;
+  }).join('')}</tr>`).join('')}
+      </tbody></table></div>`;
     const pal = palette();
     const histYears = c.income.map((x) => `FY${x.fiscalYear}`);
     const projYears = r.rows.map((x) => `FY${lastInc.fiscalYear + x.year}`);
@@ -805,15 +836,13 @@ function renderWhatIf(prices) {
     out.innerHTML = `<div class="answer" style="${up ? '' : 'background:linear-gradient(135deg,#b93838,#d64545)'}"><div class="label">${money(amount, pcur, 0)} invested in ${escapeHtml(name)} on ${r.buyDate} would be worth</div>
         <div class="value">${money(r.value, pcur, 0)}</div>
         <p class="say">${up ? 'A gain' : 'A loss'} of <b>${money(Math.abs(r.profit), pcur, 0)}</b> (${signedPct(r.totalReturn)})${isNum(r.annualReturn) ? `, or <b>${signedPct(r.annualReturn)}</b> a year on average over ${r.years.toFixed(1)} years` : ''}.</p></div>
-      <div class="stats">
-        ${stat('Bought at', `${money(r.buyPrice, pcur)} <span class="muted small">${r.buyDate}</span>`)}
+      <div class="card wi-chart" style="margin-top:16px"><div class="chart-box"><canvas id="c-whatif"></canvas></div></div>`;
+    $('#wi-stats').innerHTML = `${stat('Bought at', `${money(r.buyPrice, pcur)} <span class="muted small">${r.buyDate}</span>`)}
         ${stat('Price today', `${money(r.endPrice, pcur)} <span class="muted small">${r.endDate}</span>`)}
         ${stat('Shares bought', r.sharesBought.toLocaleString('en-US', { maximumFractionDigits: 2 }))}
         ${stat('Dividends received', money(r.dividendsReceived, pcur, 0))}
         ${$('#wi-reinvest').checked ? stat('Shares today (with reinvested dividends)', r.sharesNow.toLocaleString('en-US', { maximumFractionDigits: 2 })) : ''}
-        ${stat('Price change alone', signedPct(r.priceOnlyReturn))}
-      </div>
-      <div class="card"><div class="chart-box short"><canvas id="c-whatif"></canvas></div></div>`;
+        ${stat('Price change alone', signedPct(r.priceOnlyReturn))}`;
     const pal = palette();
     lineChart($('#c-whatif'), r.series.map((x) => x[0]), [
       { label: 'Value of the investment', data: r.series.map((x) => Math.round(x[1])), color: up ? pal.brand : pal.red, fill: true, pointRadius: 0, tension: 0.1 },
@@ -971,7 +1000,7 @@ function renderSuggestions() {
 // Choose the number of columns so rows come out even (8 tiles → 4 + 4, 9 → 3 + 3 + 3) instead of 6 + 2.
 function balanceGrids(root = result) {
   const MIN = { kpis: 150, facts: 160, stats: 130 };
-  root.querySelectorAll('.kpis, .facts, .stats').forEach((el) => {
+  root.querySelectorAll('.kpis, .facts, .stats:not(.stack)').forEach((el) => {
     const n = el.children.length;
     if (!n) return;
     const kind = Object.keys(MIN).find((k) => el.classList.contains(k));
