@@ -68,6 +68,8 @@ export function demoCompany() {
   return completeRows({
     source: 'Sample data (fictional company)',
     isDemo: true,
+    reportingCurrency: 'USD',
+    fx: 1,
     profile: {
       symbol: 'DEMO', name: 'Rat Industries (sample company)', exchange: 'Demo Exchange', currency: 'USD',
       sector: 'Industrials', industry: 'Farm & Construction Machinery',
@@ -94,18 +96,24 @@ export function demoCompany() {
 
 export function demoPrices() {
   const rand = seeded(42);
-  const dates = [], close = [];
+  const dates = [], open = [], high = [], low = [], close = [], volume = [];
   let p = 8;
   const d = new Date(Date.UTC(2005, 2, 15));
   const end = Date.now();
   while (d.getTime() < end) {
     const wd = d.getUTCDay();
     if (wd !== 0 && wd !== 6) {
+      const o = p;
       p *= 1 + (rand() - 0.4985) * 0.035;
+      const r2 = (v) => Math.round(v * 100) / 100;
       dates.push(d.toISOString().slice(0, 10));
-      close.push(Math.round(p * 100) / 100);
+      open.push(r2(o));
+      close.push(r2(p));
+      high.push(r2(Math.max(o, p) * (1 + rand() * 0.012)));
+      low.push(r2(Math.min(o, p) * (1 - rand() * 0.012)));
+      volume.push(Math.round(200000 + rand() * 800000));
     }
     d.setUTCDate(d.getUTCDate() + 1);
   }
-  return { source: 'Sample data (fictional company)', dates, close };
+  return { source: 'Sample data (fictional company)', dates, open, high, low, close, volume };
 }

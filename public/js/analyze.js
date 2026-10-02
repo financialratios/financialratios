@@ -4,9 +4,10 @@ import {
   yearlyRatios, historySummary, currentValuation, historicalMultiples, dcf, average, isNum, growthSeries,
 } from './lib/finance.js';
 import { compact, money, pct, signedPct, times, plain, millions, words, escapeHtml, DASH } from './lib/format.js';
-import { barChart, lineChart, donutChart, priceChart, palette } from './charts.js';
+import { barChart, lineChart, donutChart, palette } from './charts.js';
 import { INCOME_ROWS, BALANCE_ROWS, CASHFLOW_ROWS, RATIO_ROWS } from './rows.js';
 import { downloadExcel, downloadPdf } from './export.js';
+import { profileFor, SUGGESTIONS } from './profiles.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -64,7 +65,10 @@ function setupSearch() {
     const q = input.value.trim();
     if (q) go(q.includes(' ') && items[0] ? items[0].symbol : q);
   });
-  $$('#quick-picks button').forEach((b) => b.addEventListener('click', () => go(b.dataset.t)));
+  $('#quick-picks').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-t]');
+    if (b) go(b.dataset.t);
+  });
   function go(sym) {
     close();
     input.value = sym.toUpperCase();
@@ -75,7 +79,9 @@ function setupSearch() {
 
 function compactHero(on) {
   $('#search-hero').style.padding = on ? '20px 0 0' : '';
-  ['#search-title', '#search-sub', '#quick-picks', '.search-hero .eyebrow'].forEach((s) => $(s)?.classList.toggle('hidden', on));
+  ['#search-title', '#search-sub', '.search-hero .eyebrow'].forEach((s) => $(s)?.classList.toggle('hidden', on));
+  const d = $('#sugg');
+  if (d) d.open = !on;
 }
 
 // ===================== Loading =====================
@@ -109,11 +115,13 @@ async function load(raw) {
 
 // ===================== Rendering =====================
 function render(c) {
-  const cur = c.profile.currency || 'USD';
+  // Statements are in the reporting currency; the share price may trade in another one (e.g. ADRs).
+  const cur = c.reportingCurrency || c.profile.currency || 'USD';
+  const pcur = c.profile.currency || cur;
   const ratios = yearlyRatios(c);
   const hist = historySummary(c);
   const val = currentValuation(c);
-  Object.assign(state, { ratios, hist, val, cur });
+  Object.assign(state, { ratios, hist, val, cur, pcur });
   const last = c.income[c.income.length - 1];
   const lastCf = c.cashflow[c.cashflow.length - 1] || {};
   const q = c.quote || {};
@@ -122,13 +130,16 @@ function render(c) {
   document.title = `${p.name} (${p.symbol}) — analysis — Financial Rat`;
 
   result.innerHTML = `
+  ${pcur !== cur ? `<div class="notice">💱 ${escapeHtml(p.name)} reports its results in <b>${escapeHtml(cur)}</b>, while the shares shown here trade in <b>${escapeHtml(pcur)}</b>.
+    ${isNum(val.fx) ? `Valuation numbers convert the market value at today's rate (1 ${escapeHtml(cur)} = ${plain(val.fx, 4)} ${escapeHtml(pcur)}).` : 'The exchange rate could not be loaded, so valuation multiples are not shown.'}</div>` : ''}
+  ${c.source === 'Yahoo Finance' ? '<div class="notice">🌍 Non-US company: our free data source provides about the <b>last 4 years</b> of annual statements (US companies get 10 years from the SEC).</div>' : ''}
   ${c.isDemo ? '<div class="notice">🧪 <b>Sample company.</b> Rat Industries and all its numbers are made up, to show how the analysis works. Search a real ticker to analyze a real company.</div>' : ''}
   <div class="card company-head" style="margin-top:16px">
     <div class="name">
       ${p.logo ? `<img src="${escapeHtml(p.logo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
       <div>
         <h1>${escapeHtml(p.name)}</h1>
-        <div class="muted"><b>${escapeHtml(p.symbol)}</b>${p.exchange ? ` · ${escapeHtml(p.exchange)}` : ''} · figures in ${escapeHtml(cur)}</div>
+        <div class="muted"><b>${escapeHtml(p.symbol)}</b>${p.exchange ? ` · ${escapeHtml(p.exchange)}` : ''} · statements in ${escapeHtml(cur)}${pcur !== cur ? ` · shares trade in ${escapeHtml(pcur)}` : ''}</div>
         <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
           ${p.sector ? `<span class="pill">${escapeHtml(p.sector)}</span>` : ''}${p.industry ? `<span class="pill">${escapeHtml(p.industry)}</span>` : ''}
         </div>
@@ -136,8 +147,8 @@ function render(c) {
     </div>
     <div class="price-box">
       <div>
-        <div class="price">${isNum(q.price) ? money(q.price, cur) : '<span class="muted" style="font-size:1rem">Price unavailable</span>'}</div>
-        ${isNum(q.change) ? `<div class="chg ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${money(Math.abs(q.change), cur)} (${signedPct((q.changePercent || 0) / 100, 2)}) <span class="muted small">last session</span></div>` : ''}
+        <div class="price">${isNum(q.price) ? money(q.price, pcur) : '<span class="muted" style="font-size:1rem">Price unavailable</span>'}</div>
+        ${isNum(q.change) ? `<div class="chg ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${money(Math.abs(q.change), pcur)} (${signedPct((q.changePercent || 0) / 100, 2)}) <span class="muted small">last session</span></div>` : ''}
       </div>
       <div class="dl">
         <button class="btn btn-accent" id="dl-btn" aria-haspopup="true" aria-expanded="false">⬇ Download statements</button>
@@ -156,6 +167,7 @@ function render(c) {
 
   <section class="az-section" id="overview">
     <h2>Overview</h2>
+    <div id="story"></div>
     <div class="kpis">
       ${kpi('Market value', compact(val.marketCap, cur), 'price × shares')}
       ${kpi(`Revenue FY${last.fiscalYear}`, compact(last.revenue, cur), `${signedPct(hist.revenueGrowth[hist.revenueGrowth.length - 1])} vs year before`)}
@@ -172,11 +184,16 @@ function render(c) {
 
   <section class="az-section" id="price">
     <div class="toolbar"><h2 style="margin:0">Price history</h2>
-      <div class="range-btns" id="range-btns">${['1M', '6M', '1Y', '5Y', '10Y', 'MAX'].map((r) => `<button data-r="${r}"${r === 'MAX' ? ' class="active"' : ''}>${r === 'MAX' ? 'Since IPO' : r}</button>`).join('')}
-        <label class="check small" style="margin-left:8px"><input type="checkbox" id="log-scale"> Log scale</label></div></div>
-    <div class="card" style="margin-top:12px"><div class="chart-box tall"><canvas id="c-price" aria-label="Daily share price"></canvas><div class="spinner" id="price-spin" style="position:absolute;inset:0;margin:auto"></div></div>
+      <div class="seg-btns" id="chart-type"><button data-type="candle" class="active">🕯️ Candles</button><button data-type="line">Line</button></div></div>
+    <div class="range-btns" id="range-btns" style="margin-top:12px">${['1M', '6M', '1Y', '5Y', '10Y', 'MAX'].map((r) => `<button data-r="${r}">${r === 'MAX' ? 'Since IPO' : r}</button>`).join('')}
+      <label class="check small" style="margin-left:8px"><input type="checkbox" id="log-scale"> Log scale</label></div>
+    <div class="card" style="margin-top:12px"><div class="chart-box tall" id="c-price" aria-label="Daily share price candles"><div class="spinner" id="price-spin" style="position:absolute;inset:0;margin:auto"></div></div>
       <div class="stats" id="price-stats"></div>
-      <p class="small muted" style="margin:0" id="price-note">Daily closing prices, adjusted for stock splits. Log scale shows equal % moves as equal heights — useful for long histories.</p></div>
+      <details class="small muted"><summary style="cursor:pointer;font-weight:700">How to read a candle 🕯️</summary>
+        <p style="margin:8px 0 0">Each candle is one trading day. The thick body runs from the <b>opening</b> price to the <b>closing</b> price:
+        <span class="up"><b>green</b></span> if the price closed higher than it opened, <span class="down"><b>red</b></span> if lower.
+        The thin lines (wicks) show the day's <b>highest</b> and <b>lowest</b> prices. The bars at the bottom show how many shares changed hands (volume).
+        Drag to move through time, scroll or pinch to zoom. Prices are adjusted for stock splits; dividends are not included.</p></details></div>
   </section>
 
   <section class="az-section" id="business">
@@ -247,6 +264,7 @@ function render(c) {
   wireDownload(c);
   wireTabs();
   renderSegments(c);
+  renderStory(c);
   renderStatement('income');
   $$('#st-btns button').forEach((b) => b.addEventListener('click', () => {
     $$('#st-btns button').forEach((x) => x.classList.toggle('active', x === b));
@@ -317,7 +335,16 @@ function wireTabs() {
 function renderSegments(c) {
   const box = $('#segments');
   const cur = state.cur;
-  const seg = c.segments || {};
+  const seg = { ...(c.segments || {}) };
+  const prof = profileFor(c.profile.symbol);
+  let curatedNote = '';
+  if (!seg.product?.items?.length && !seg.geographic?.items?.length && prof?.mix) {
+    // No live segment data: use the figures from the company's latest annual report (hand-collected).
+    seg.product = { year: prof.mix.year, items: prof.mix.items.map(([name, value]) => ({ name, value: prof.mix.unit === '%' ? value : value * 1e9 })) };
+    curatedNote = `<p class="small muted">Source: ${escapeHtml(c.profile.name)} annual report, ${escapeHtml(prof.mix.year)}; rounded${prof.mix.cur && prof.mix.cur !== cur ? `, in ${prof.mix.cur}` : ''}.${prof.mix.note ? ' ' + escapeHtml(prof.mix.note) : ''}</p>`;
+  }
+  const isPct = prof?.mix?.unit === '%' && curatedNote;
+  const mixCur = curatedNote && prof.mix.cur ? prof.mix.cur : cur;
   const kinds = [['product', 'By product / segment'], ['geographic', 'By region']].filter(([k]) => seg[k]?.items?.length);
   if (!kinds.length) {
     box.innerHTML = `<h3 style="margin-top:0">Where the revenue comes from</h3>
@@ -328,7 +355,18 @@ function renderSegments(c) {
   box.innerHTML = `<div class="toolbar"><h3 style="margin:0">Where the revenue comes from</h3>
     ${kinds.length > 1 ? `<div class="seg-btns" id="seg-btns">${kinds.map(([k, l], i) => `<button data-k="${k}"${i === 0 ? ' class="active"' : ''}>${l.replace('By ', '')}</button>`).join('')}</div>` : ''}</div>
     <div class="donut-wrap" style="margin-top:12px"><div class="chart-box short"><canvas id="c-donut" aria-label="Revenue sources"></canvas></div><ul class="legend-list" id="seg-legend"></ul></div>
-    <div id="seg-explain"></div>`;
+    <div id="seg-explain"></div>${curatedNote}
+    <div id="seg-compare"></div>`;
+  const money2 = (v) => (isPct ? `${v}%` : compact(v, mixCur));
+  if (curatedNote && prof.mix.items.some((x) => x[2]) && new Set(prof.mix.items.map((x) => x[2])).size > 1) {
+    // Compare the kinds of revenue, e.g. advertising vs subscriptions vs cloud.
+    const groups = {};
+    prof.mix.items.forEach(([, v, g]) => { groups[g] = (groups[g] || 0) + v; });
+    const entries = Object.entries(groups).sort((a, b) => b[1] - a[1]);
+    $('#seg-compare').innerHTML = `<h4 style="margin:20px 0 6px">${escapeHtml(prof.mix.groupsTitle || 'Kinds of revenue compared')}</h4><div class="chart-box short"><canvas id="c-compare"></canvas></div>`;
+    barChart($('#c-compare'), entries.map((e) => e[0]), [{ label: prof.mix.unit === '%' ? '% of sales' : `Revenue (${prof.mix.cur || cur} bn)`, data: entries.map((e) => Math.round(e[1] * 10) / 10) }],
+      { yFormat: (v) => (prof.mix.unit === '%' ? `${v}%` : `${v}bn`), legend: false, horizontal: true });
+  }
   const draw = (kind) => {
     const s = seg[kind];
     const total = s.items.reduce((a, b) => a + b.value, 0);
@@ -337,8 +375,8 @@ function renderSegments(c) {
       const rest = items.slice(6).reduce((a, b) => a + b.value, 0);
       items = [...items.slice(0, 6), { name: 'Other', value: rest }];
     }
-    const colors = donutChart($('#c-donut'), items.map((i) => i.name), items.map((i) => i.value), { format: (v) => `${compact(v, cur)} (${pct(v / total)})` });
-    $('#seg-legend').innerHTML = items.map((it, i) => `<li><span class="sw" style="background:${colors[i]}"></span><span>${escapeHtml(it.name)}</span><b>${pct(it.value / total)}</b><span class="muted">${compact(it.value, cur)}</span></li>`).join('');
+    const colors = donutChart($('#c-donut'), items.map((i) => i.name), items.map((i) => i.value), { format: (v) => `${money2(v)} (${pct(v / total)})` });
+    $('#seg-legend').innerHTML = items.map((it, i) => `<li><span class="sw" style="background:${colors[i]}"></span><span>${escapeHtml(it.name)}</span><b>${pct(it.value / total)}</b><span class="muted">${isPct ? '' : money2(it.value)}</span></li>`).join('');
     const top = items[0];
     $('#seg-explain').innerHTML = arrow(`In FY${s.year}, the largest source was <b>${escapeHtml(top.name)}</b> with ${pct(top.value / total)} of the revenue reported in this breakdown.
       ${items.length > 1 ? `The top two sources together made up ${pct((items[0].value + items[1].value) / total)}.` : ''} The more concentrated the revenue, the more the company depends on that one source.`);
@@ -426,53 +464,98 @@ function renderRatioCharts(c, ratios) {
   barChart($('#c-liquidity'), years, [{ label: 'Current ratio', data: ratios.map((r) => (isNum(r.currentRatio) ? Math.round(r.currentRatio * 100) / 100 : null)), color: pal.series[5] }], { yFormat: (v) => `${Number(v).toFixed(1)}x`, legend: false });
 }
 
-// ---------- Price history ----------
+// ---------- Price history: daily candles (TradingView Lightweight Charts) ----------
+let priceChartApi = null;
 function renderPrices(prices) {
-  const spin = $('#price-spin');
-  spin?.remove();
+  $('#price-spin')?.remove();
+  const box = $('#c-price');
   if (!prices || prices.error || !prices.dates?.length) {
-    $('#c-price').closest('.chart-box').innerHTML = `<p class="muted center" style="padding-top:120px">Price history isn't available right now${prices?.error ? ` (${escapeHtml(prices.error)})` : ''}.</p>`;
+    box.innerHTML = `<p class="muted center" style="padding-top:120px">Price history isn't available right now${prices?.error ? ` (${escapeHtml(prices.error)})` : ''}.</p>`;
     return;
   }
-  const all = prices.dates.map((d, i) => ({ x: Date.parse(d), y: prices.close[i] }));
-  const cur = state.cur;
-  const sym = money(0, cur, 0).replace(/[0\s]/g, '');
-  let range = 'MAX';
-  const draw = () => {
-    const now = all[all.length - 1].x;
-    const back = { '1M': 31, '6M': 183, '1Y': 366, '5Y': 1827, '10Y': 3653 }[range];
-    const pts = back ? all.filter((p) => p.x >= now - back * 864e5) : all;
-    priceChart($('#c-price'), pts, { currency: sym, logScale: $('#log-scale').checked });
-    priceStats(pts, range);
+  const LWC = window.LightweightCharts;
+  const pcur = state.pcur;
+  const css = getComputedStyle(document.documentElement);
+  const v = (n) => css.getPropertyValue(n).trim();
+  const hasOhlc = Array.isArray(prices.open) && prices.open.length === prices.dates.length;
+  const candles = prices.dates.map((d, i) => ({
+    time: d, open: hasOhlc ? prices.open[i] : prices.close[i], high: hasOhlc ? prices.high[i] : prices.close[i],
+    low: hasOhlc ? prices.low[i] : prices.close[i], close: prices.close[i],
+  }));
+  const line = candles.map((c) => ({ time: c.time, value: c.close }));
+  const vols = Array.isArray(prices.volume) ? prices.dates.map((d, i) => ({
+    time: d, value: prices.volume[i] || 0, color: candles[i].close >= candles[i].open ? `${v('--brand')}55` : `${v('--red')}55`,
+  })) : [];
+
+  priceChartApi?.remove();
+  box.innerHTML = '';
+  const chart = LWC.createChart(box, {
+    autoSize: true,
+    layout: { background: { color: 'transparent' }, textColor: v('--muted'), fontFamily: v('--font') },
+    grid: { vertLines: { visible: false }, horzLines: { color: v('--line') } },
+    rightPriceScale: { borderVisible: false },
+    timeScale: { borderVisible: false, timeVisible: false },
+    crosshair: { mode: 0 },
+    localization: { priceFormatter: (x) => money(x, pcur) },
+  });
+  priceChartApi = chart;
+  const candleSeries = chart.addSeries(LWC.CandlestickSeries, {
+    upColor: v('--brand'), downColor: v('--red'), borderVisible: false, wickUpColor: v('--brand'), wickDownColor: v('--red'),
+  });
+  const lineSeries = chart.addSeries(LWC.LineSeries, { color: v('--brand'), lineWidth: 2, visible: false });
+  candleSeries.setData(candles);
+  lineSeries.setData(line);
+  if (vols.length) {
+    const volSeries = chart.addSeries(LWC.HistogramSeries, { priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
+    chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+    volSeries.setData(vols);
+  }
+  chart.priceScale('right').applyOptions({ scaleMargins: { top: 0.08, bottom: vols.length ? 0.22 : 0.05 } });
+
+  const lastDate = candles[candles.length - 1].time;
+  const setRange = (r) => {
+    const back = { '1M': 31, '6M': 183, '1Y': 366, '5Y': 1827, '10Y': 3653 }[r];
+    if (!back) chart.timeScale().fitContent();
+    else {
+      const from = new Date(Date.parse(lastDate) - back * 864e5).toISOString().slice(0, 10);
+      chart.timeScale().setVisibleRange({ from: from < candles[0].time ? candles[0].time : from, to: lastDate });
+    }
+    const fromIdx = back ? candles.findIndex((c) => Date.parse(c.time) >= Date.parse(lastDate) - back * 864e5) : 0;
+    priceStats(candles.slice(Math.max(0, fromIdx)), r);
   };
   $$('#range-btns button').forEach((b) => b.addEventListener('click', () => {
-    range = b.dataset.r;
     $$('#range-btns button').forEach((x) => x.classList.toggle('active', x === b));
-    draw();
+    setRange(b.dataset.r);
   }));
-  $('#log-scale').addEventListener('change', draw);
-  draw();
+  $$('#chart-type button').forEach((b) => b.addEventListener('click', () => {
+    $$('#chart-type button').forEach((x) => x.classList.toggle('active', x === b));
+    const candle = b.dataset.type === 'candle';
+    candleSeries.applyOptions({ visible: candle });
+    lineSeries.applyOptions({ visible: !candle });
+  }));
+  $('#log-scale').addEventListener('change', (e) => chart.priceScale('right').applyOptions({ mode: e.target.checked ? 1 : 0 }));
+  // Candles are easiest to read over a year; "Since IPO" shows the whole history.
+  const yearBtn = $('#range-btns button[data-r="1Y"]');
+  yearBtn.click();
 }
 
-function priceStats(pts, range) {
-  const cur = state.cur;
-  const first = pts[0], last = pts[pts.length - 1];
-  const years = (last.x - first.x) / 3.156e10;
+function priceStats(rows, range) {
+  const pcur = state.pcur;
+  const first = rows[0], last = rows[rows.length - 1];
+  const years = (Date.parse(last.time) - Date.parse(first.time)) / 3.156e10;
   let peak = -Infinity, maxDd = 0;
-  for (const p of pts) { peak = Math.max(peak, p.y); maxDd = Math.min(maxDd, p.y / peak - 1); }
-  const yearAgo = last.x - 365 * 864e5;
-  const lastYear = pts.filter((p) => p.x >= yearAgo);
-  const hi = Math.max(...lastYear.map((p) => p.y)), lo = Math.min(...lastYear.map((p) => p.y));
-  const total = last.y / first.y - 1;
-  const date = (t) => new Date(t).toISOString().slice(0, 10);
+  for (const r of rows) { peak = Math.max(peak, r.close); maxDd = Math.min(maxDd, r.close / peak - 1); }
+  const yearAgo = Date.parse(last.time) - 365 * 864e5;
+  const lastYear = rows.filter((r) => Date.parse(r.time) >= yearAgo);
+  const hi = Math.max(...lastYear.map((r) => r.high)), lo = Math.min(...lastYear.map((r) => r.low));
+  const total = last.close / first.close - 1;
   $('#price-stats').innerHTML = [
-    stat(range === 'MAX' ? 'First price in our data' : 'Start of period', `${money(first.y, cur)} <span class="muted small">${date(first.x)}</span>`),
+    stat(range === 'MAX' ? 'First price in our data' : 'Start of period', `${money(first.close, pcur)} <span class="muted small">${first.time}</span>`),
     stat('Price change', `<span class="${total >= 0 ? 'up' : 'down'}">${signedPct(total)}</span>`),
-    years >= 1 ? stat('Per year (compounded)', pct((last.y / first.y) ** (1 / years) - 1)) : '',
+    years >= 1 ? stat('Per year (compounded)', pct((last.close / first.close) ** (1 / years) - 1)) : '',
     stat('Largest fall from a peak', `<span class="down">${pct(maxDd)}</span>`),
-    stat('52-week range', `${money(lo, cur)} – ${money(hi, cur)}`),
+    stat('52-week range', `${money(lo, pcur)} – ${money(hi, pcur)}`),
   ].join('');
-  $('#price-note').textContent = `Daily closing prices adjusted for stock splits (dividends not included). ${range === 'MAX' ? 'The chart starts at the first trading day available from our data provider, which for most companies is the IPO.' : ''} Log scale shows equal % moves as equal heights.`;
 }
 
 // ---------- Historical multiples ----------
@@ -481,6 +564,11 @@ function renderMultiplesHistory() {
   const box = $('#multiples-text');
   if (!state.prices) {
     box.innerHTML = '<p class="muted">Needs the price history, which is not available right now.</p>';
+    return;
+  }
+  if (state.pcur !== state.cur) {
+    $('#c-multiples').closest('.chart-box').remove();
+    box.innerHTML = '<p class="muted">Past multiples are not shown for companies whose shares trade in a different currency from their reports, because past exchange rates would distort them.</p>';
     return;
   }
   const hm = historicalMultiples(c, state.prices);
@@ -504,7 +592,7 @@ function renderMultiplesHistory() {
 
 // ---------- DCF ----------
 function renderDcf(c, hist, val) {
-  const cur = state.cur;
+  const cur = state.cur, pcur = state.pcur;
   const lastInc = c.income[c.income.length - 1];
   const defaults = {
     growth: isNum(hist.revenueCagr) ? hist.revenueCagr * 100 : 3,
@@ -530,7 +618,12 @@ function renderDcf(c, hist, val) {
   const update = () => {
     const v = read();
     sliders.forEach((s) => { $(`#o-${s.id}`).textContent = `${v[s.id].toFixed(s.step < 0.5 ? 2 : 1)}%`; });
-    const run = (g, d) => dcf({ revenue: lastInc.revenue, growth: g / 100, fcfMargin: v.margin / 100, discount: d / 100, terminalGrowth: v.terminal / 100, netDebt: val.netDebt, shares });
+    const run = (g, d) => {
+      const r = dcf({ revenue: lastInc.revenue, growth: g / 100, fcfMargin: v.margin / 100, discount: d / 100, terminalGrowth: v.terminal / 100, netDebt: val.netDebt, shares });
+      // Per-share value in the currency (and share units) the price is quoted in.
+      if (r && !r.error) r.perShare = isNum(val.fx) && isNum(val.priceShares) && val.priceShares > 0 ? (r.equityValue * val.fx) / val.priceShares : pcur === cur ? r.perShare : null;
+      return r;
+    };
     const r = run(v.growth, v.discount);
     const out = $('#dcf-out');
     if (!r || r.error) {
@@ -541,8 +634,8 @@ function renderDcf(c, hist, val) {
     const diff = isNum(r.perShare) && isNum(price) && r.perShare > 0 ? price / r.perShare - 1 : null;
     out.innerHTML = `
       <div class="answer"><div class="label">Model value per share under these assumptions</div>
-        <div class="value">${isNum(r.perShare) ? (r.perShare > 0 ? money(r.perShare, cur) : 'Below zero') : DASH}</div>
-        <p class="say">${isNum(diff) ? `The current price of ${money(price, cur)} is <b>${pct(Math.abs(diff))} ${diff >= 0 ? 'above' : 'below'}</b> this model value. Change the assumptions to see what the price implies.` :
+        <div class="value">${isNum(r.perShare) ? (r.perShare > 0 ? money(r.perShare, pcur) : 'Below zero') : DASH}</div>
+        <p class="say">${isNum(diff) ? `The current price of ${money(price, pcur)} is <b>${pct(Math.abs(diff))} ${diff >= 0 ? 'above' : 'below'}</b> this model value. Change the assumptions to see what the price implies.` :
     r.perShare <= 0 ? 'With these assumptions the projected cash flows do not cover the company\'s net debt.' : ''}</p></div>
       <div class="stats">
         ${stat('Enterprise value', compact(r.enterpriseValue, cur))}${stat(val.netDebt >= 0 ? '− Net debt' : '+ Net cash', compact(Math.abs(val.netDebt), cur))}
@@ -554,7 +647,7 @@ function renderDcf(c, hist, val) {
       <div class="table-wrap"><table class="sens"><thead><tr><th>Discount ↓ / growth →</th>${[-4, -2, 0, 2, 4].map((dg) => `<th>${(v.growth + dg).toFixed(1)}%</th>`).join('')}</tr></thead><tbody>
         ${[-2, -1, 0, 1, 2].map((dd) => `<tr><td>${(v.discount + dd).toFixed(2)}%</td>${[-4, -2, 0, 2, 4].map((dg) => {
     const x = run(v.growth + dg, v.discount + dd);
-    return `<td class="${dd === 0 && dg === 0 ? 'mid' : ''}">${x && !x.error && isNum(x.perShare) ? money(x.perShare, cur) : DASH}</td>`;
+    return `<td class="${dd === 0 && dg === 0 ? 'mid' : ''}">${x && !x.error && isNum(x.perShare) ? money(x.perShare, pcur) : DASH}</td>`;
   }).join('')}</tr>`).join('')}
       </tbody></table></div>
       <details class="card" style="margin-top:16px"><summary style="cursor:pointer;font-weight:800">See the year-by-year projection</summary>
@@ -582,7 +675,101 @@ function renderDcf(c, hist, val) {
   update();
 }
 
+
+// ---------- Business model story (overview) ----------
+// Pictures and short descriptions come from Wikipedia's public API (free, works from the browser).
+const wikiCache = new Map();
+async function wikiSummary(title) {
+  if (!wikiCache.has(title)) {
+    wikiCache.set(title, fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(title))}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => (j && j.type !== 'disambiguation' ? { title: j.title, extract: j.extract || '', thumb: j.thumbnail?.source || '', url: j.content_urls?.desktop?.page || '' } : null))
+      .catch(() => null));
+  }
+  return wikiCache.get(title);
+}
+
+async function wikiFindCompany(name) {
+  const clean = name.replace(/\(.*?\)|\/[A-Z]+\/|,?\s+(inc|corp|corporation|co|company|plc|ltd|limited|holdings?|group|n\.?v|s\.?a|s\.?e|ag|a\/s|se)\.?\b/gi, ' ').replace(/\s+/g, ' ').trim();
+  try {
+    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(clean + ' company')}&srlimit=1&format=json&origin=*`);
+    const title = (await r.json())?.query?.search?.[0]?.title;
+    return title ? wikiSummary(title.replace(/ /g, '_')) : null;
+  } catch { return null; }
+}
+
+const firstSentences = (text, n = 3) => (text.match(/[^.!?]+[.!?]+(\s|$)/g) || [text]).slice(0, n).join('').trim();
+
+function numberFacts(c) {
+  // When we have no hand-written profile: what stands out in the company's own numbers.
+  const r = state.ratios[state.ratios.length - 1] || {};
+  const inc = c.income[c.income.length - 1] || {};
+  const h = state.hist, out = [];
+  if (isNum(r.grossMargin)) out.push(`Keeps <b>${pct(r.grossMargin, 0)}</b> of each sale after direct costs (gross margin)${r.grossMargin > 0.6 ? ' — typical of software, brands or patented products' : r.grossMargin < 0.25 ? ' — typical of retail, distribution or commodity businesses' : ''}.`);
+  if (isNum(inc.researchAndDevelopment) && isNum(inc.revenue) && inc.revenue > 0) out.push(`Spends <b>${pct(inc.researchAndDevelopment / inc.revenue, 0)}</b> of revenue on research &amp; development.`);
+  if (isNum(r.capexToRevenue)) out.push(`Invests <b>${pct(r.capexToRevenue, 0)}</b> of revenue in buildings, machines and equipment each year${r.capexToRevenue > 0.15 ? ' (a capital-heavy business)' : r.capexToRevenue < 0.04 ? ' (a capital-light business)' : ''}.`);
+  if (isNum(h.revenueCagr)) out.push(`Revenue grew <b>${pct(h.revenueCagr)}</b> a year on average over ${c.income.length} years.`);
+  return out;
+}
+
+async function renderStory(c) {
+  const box = $('#story');
+  if (!box) return;
+  const p = c.profile, prof = profileFor(p.symbol);
+  const seg = c.segments?.product?.items?.length ? c.segments.product : prof?.mix ? { year: prof.mix.year, items: prof.mix.items.map(([name, value]) => ({ name, value })) } : null;
+  let topLine = '';
+  if (seg) {
+    const total = seg.items.reduce((a, b) => a + b.value, 0);
+    const top = [...seg.items].sort((a, b) => b.value - a.value)[0];
+    topLine = `<p style="margin:8px 0 0">💰 <b>Most sales come from:</b> ${escapeHtml(top.name)} — ${pct(top.value / total, 0)} of revenue (${escapeHtml(String(seg.year))}). <a href="#business">See the full breakdown →</a></p>`;
+  }
+  const model = prof?.model || (p.description ? firstSentences(p.description) : '');
+  const edge = prof?.edge?.length ? prof.edge : null;
+  box.innerHTML = `<div class="card story">
+    <div class="story-grid">
+      <div>
+        <h3 style="margin-top:0">🧭 Business model</h3>
+        <p id="story-model">${model ? escapeHtml(model) : '<span class="muted">Looking up a short description…</span>'}</p>
+        ${topLine}
+      </div>
+      <div>
+        <h3 style="margin-top:0">⭐ ${edge ? 'What sets it apart' : 'What stands out in the numbers'}</h3>
+        <ul class="edge">${(edge || numberFacts(c)).map((e) => `<li>${edge ? escapeHtml(e) : e}</li>`).join('')}</ul>
+      </div>
+    </div>
+    ${prof?.famous?.length ? `<h3>🏆 What made it famous</h3><div class="products" id="products">${prof.famous.map(([name]) => `<figure class="product"><div class="ph">⏳</div><figcaption>${escapeHtml(name)}</figcaption></figure>`).join('')}</div>
+      <p class="small muted" style="margin:6px 0 0">Pictures: Wikipedia / Wikimedia Commons (click a picture for its source and licence).</p>` : ''}
+  </div>`;
+  if (c.isDemo) return;
+  if (prof?.famous?.length) {
+    const figs = $$('#products .product');
+    prof.famous.forEach(async ([name, wiki], i) => {
+      const w = await wikiSummary(wiki);
+      const ph = figs[i]?.querySelector('.ph');
+      if (!ph) return;
+      if (w?.thumb) ph.outerHTML = `<a href="${escapeHtml(w.url)}" target="_blank" rel="noopener" title="${escapeHtml(w.title)} on Wikipedia"><img src="${escapeHtml(w.thumb)}" alt="${escapeHtml(name)}" loading="lazy"></a>`;
+      else ph.textContent = '📦';
+    });
+  }
+  if (!model) {
+    const w = await wikiFindCompany(p.name);
+    const el = $('#story-model');
+    if (!el) return;
+    el.innerHTML = w?.extract ? `${escapeHtml(firstSentences(w.extract))} <a class="small" href="${escapeHtml(w.url)}" target="_blank" rel="noopener">(Wikipedia)</a>`
+      : `<span class="muted">No description available. The company's annual report (section "Business") explains its business model.</span>`;
+  }
+}
+
+// ---------- Suggestions under the search box ----------
+function renderSuggestions() {
+  const box = $('#quick-picks');
+  box.innerHTML = `<details id="sugg" open><summary>⭐ Popular companies to explore</summary><div class="sugg-groups">${SUGGESTIONS.map(([title, list]) => `
+    <div class="sugg-group"><div class="sugg-title">${title}</div><div class="sugg-chips">${list.map(([t, n]) => `<button type="button" data-t="${t}"><b>${t}</b> <span>${escapeHtml(n)}</span></button>`).join('')}</div></div>`).join('')}
+    <div class="sugg-group"><div class="sugg-title">🧪 Practice</div><div class="sugg-chips"><button type="button" data-t="DEMO"><b>DEMO</b> <span>Sample company</span></button></div></div></div></details>`;
+}
+
 // ===================== Start =====================
+renderSuggestions();
 setupSearch();
 const initial = new URLSearchParams(location.search).get('t');
 if (initial) load(initial);

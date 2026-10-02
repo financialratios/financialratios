@@ -19,8 +19,8 @@ export function alpha(color, a) {
   return color;
 }
 
-function base(p, { yFormat, xFormat, legend = true, stacked = false } = {}) {
-  return {
+function base(p, { yFormat, xFormat, legend = true, stacked = false, horizontal = false } = {}) {
+  const o = {
     responsive: true,
     maintainAspectRatio: false,
     animation: { duration: 400 },
@@ -37,6 +37,17 @@ function base(p, { yFormat, xFormat, legend = true, stacked = false } = {}) {
       y: { stacked, grid: { color: p.line }, border: { display: false }, ticks: { color: p.muted, ...(yFormat ? { callback: (v) => yFormat(v) } : {}) } },
     },
   };
+  if (horizontal) {
+    // Bars run left to right: values on the x axis, category names on the y axis.
+    o.indexAxis = 'y';
+    o.interaction = { mode: 'index', axis: 'y', intersect: false };
+    o.scales.x.grid = { color: p.line };
+    o.scales.x.ticks = { color: p.muted, ...(yFormat ? { callback: (v) => yFormat(v) } : {}) };
+    o.scales.y.grid = { display: false };
+    o.scales.y.ticks = { color: p.ink };
+    o.plugins.tooltip.callbacks = yFormat ? { label: (ctx) => yFormat(ctx.parsed.x) } : {};
+  }
+  return o;
 }
 
 const charts = new WeakMap();

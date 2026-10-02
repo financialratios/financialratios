@@ -248,13 +248,20 @@ export function currentValuation(company) {
   const c = company.cashflow[company.cashflow.length - 1] || {};
   const price = company.quote?.price;
   const shares = company.profile?.sharesOutstanding || inc.sharesDiluted;
-  const marketCap = company.quote?.marketCap || (isNum(price) && isNum(shares) ? price * shares : null);
+  // fx = units of the trading currency per 1 unit of the reporting currency (1 when they match).
+  const mismatch = company.reportingCurrency && company.profile?.currency && company.reportingCurrency !== company.profile.currency;
+  const fx = isNum(company.fx) && company.fx > 0 ? company.fx : mismatch ? null : 1;
+  const quoteCap = company.quote?.marketCap || (isNum(price) && isNum(shares) ? price * shares : null);
+  // Every multiple below compares numbers in the currency of the financial statements.
+  const marketCap = isNum(quoteCap) && fx ? quoteCap / fx : null;
   const cashLike = (b.cash || 0) + (b.shortTermInvestments || 0);
   const netDebt = isNum(b.totalDebt) ? b.totalDebt - cashLike : -cashLike;
   const ev = isNum(marketCap) ? marketCap + netDebt : null;
   const pos = (x) => (isNum(x) && x > 0 ? x : null);
   return {
-    price, shares, marketCap, netDebt, enterpriseValue: ev,
+    price, shares, marketCap, netDebt, enterpriseValue: ev, fx,
+    // Shares measured in the units the price is quoted in (handles ADRs and share classes).
+    priceShares: isNum(quoteCap) && isNum(price) && price > 0 ? quoteCap / price : shares,
     pe: pos(inc.netIncome) ? safeDiv(marketCap, inc.netIncome) : null,
     ps: safeDiv(marketCap, pos(inc.revenue)),
     pb: safeDiv(marketCap, pos(b.totalEquity)),

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DCF valuation step by step: WACC, CAPM, cost of debt, terminal value — Financial Rat</title>
+  <meta name="description" content="A full discounted cash flow valuation with every formula explained: present value, free cash flow to the firm, CAPM cost of equity, risk-free rate, beta, market risk premium, cost of debt, WACC, terminal value and perpetuity growth.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-lesson="dcf">
+<div id="site-header"></div>
+<main id="main" class="container lesson-layout">
+  <aside class="lesson-nav" id="lesson-nav" aria-label="Lessons"></aside>
+  <article class="lesson">
+    <span class="eyebrow">Valuation · 2</span>
+    <h1>The DCF, step by step</h1>
+    <p class="intro">In the multiples lesson we compared prices. Now we build a full <b>discounted cash flow (DCF)</b> valuation, the method professional analysts use, one formula at a time.</p>
+    <div class="callout grandpa"><span class="t">👴 In one sentence</span>
+      A business is worth all the cash it will ever produce, with each future year counted a bit less because waiting has a cost.</div>
+
+    <p>We value <b>Rat Bakery</b> again (from the three statement lessons), this time the way professional analysts do. Every formula is shown with arrows pointing to what each part means.</p>
+    <div class="callout tip"><span class="t">🗺️ The map</span>
+      <ol style="margin:6px 0 0">
+        <li>Forecast the cash the business will produce (<b>free cash flow to the firm</b>).</li>
+        <li>Work out the return investors require (<b>cost of equity</b>, <b>cost of debt</b>, combined into the <b>WACC</b>).</li>
+        <li>Bring every future cash flow back to today (<b>present value</b>).</li>
+        <li>Add the value of all years after the forecast (<b>terminal value</b>, with a <b>perpetuity growth rate</b>).</li>
+        <li>Subtract debt, divide by shares: <b>value per share</b>.</li>
+      </ol></div>
+
+    <h2>Step 1 · Present value: why a future dollar is worth less</h2>
+    <p>Money today can be invested and grow. So money received in the future is worth less than the same amount today. Converting it back is called <b>discounting</b>.</p>
+    <div class="anatomy"><div class="hint-scroll">← swipe to see the whole formula →</div><div class="agrid" style="grid-template-columns:auto minmax(120px, 180px) auto minmax(120px, 180px)"><span class="eqlabel" style="grid-column:1;grid-row:3">PV =</span><span class="note" style="grid-column:2;grid-row:1;--c:var(--brand)"><b>Cash flow</b>the money you will receive in year t</span><span class="link" style="grid-column:2;grid-row:2;--c:var(--brand)"></span><span class="sym" style="grid-column:2;grid-row:3;--c:var(--brand)">CF<sub>t</sub></span><span class="op" style="grid-column:3;grid-row:3">÷</span><span class="note" style="grid-column:4;grid-row:5;--c:var(--accent)"><b>Discount factor</b>r = required yearly return; t = years until you receive it. The further away, the bigger the divisor</span><span class="link" style="grid-column:4;grid-row:4;--c:var(--accent)"></span><span class="sym" style="grid-column:4;grid-row:3;--c:var(--accent)">(1 + r)<sup>t</sup></span></div><div class="result">Example: 110 received in 1 year at r = 10% → 110 ÷ 1.10 = <b>100 today</b>. In 5 years → 110 ÷ 1.10<sup>5</sup> = <b>68.30 today</b>.</div></div>
+
+    <h2>Step 2 · Free cash flow to the firm (FCFF)</h2>
+    <p>We value the <b>whole business</b>, which belongs to both lenders and shareholders, so we use the cash available to <i>both</i>: before interest is paid.</p>
+    <div class="anatomy"><div class="hint-scroll">← swipe to see the whole formula →</div><div class="agrid" style="grid-template-columns:auto minmax(120px, 180px) auto minmax(120px, 180px) auto minmax(120px, 180px) auto minmax(120px, 180px)"><span class="eqlabel" style="grid-column:1;grid-row:3">FCFF =</span><span class="note" style="grid-column:2;grid-row:1;--c:var(--brand)"><b>Operating profit after tax</b>what the business earns, taxed as if it had no debt: 100,000 × 0.8 = 80,000</span><span class="link" style="grid-column:2;grid-row:2;--c:var(--brand)"></span><span class="sym" style="grid-column:2;grid-row:3;--c:var(--brand)">EBIT × (1 − t)</span><span class="op" style="grid-column:3;grid-row:3">+</span><span class="note" style="grid-column:4;grid-row:5;--c:var(--blue)"><b>Depreciation &amp; amortisation</b>added back: a cost with no cash out (30,000)</span><span class="link" style="grid-column:4;grid-row:4;--c:var(--blue)"></span><span class="sym" style="grid-column:4;grid-row:3;--c:var(--blue)">D&amp;A</span><span class="op" style="grid-column:5;grid-row:3">−</span><span class="note" style="grid-column:6;grid-row:1;--c:var(--red)"><b>Capital expenditure</b>cash spent on ovens and equipment (40,000)</span><span class="link" style="grid-column:6;grid-row:2;--c:var(--red)"></span><span class="sym" style="grid-column:6;grid-row:3;--c:var(--red)">Capex</span><span class="op" style="grid-column:7;grid-row:3">−</span><span class="note" style="grid-column:8;grid-row:5;--c:#8b5cf6"><b>Change in working capital</b>extra cash tied up in receivables and stock, minus extra supplier credit: 5,000 + 3,000 − 4,000 = 4,000</span><span class="link" style="grid-column:8;grid-row:4;--c:#8b5cf6"></span><span class="sym" style="grid-column:8;grid-row:3;--c:#8b5cf6">ΔNWC</span></div><div class="result">Rat Bakery: 80,000 + 30,000 − 40,000 − 4,000 = <b>66,000</b></div></div>
+    <div class="callout warn"><span class="t">🔎 Why not the 58,000 from the cash flow lesson?</span>
+      That free cash flow was <i>after</i> paying the bank's interest. FCFF adds back the after-tax interest (10,000 × 0.8 = 8,000): 58,000 + 8,000 = 66,000. Cash for <b>everyone</b> → discounted at the rate that rewards <b>everyone</b>, the WACC.</div>
+
+    <h2>Step 3 · Cost of equity: what shareholders demand (CAPM)</h2>
+    <p>Shareholders take the most risk, so they want the highest return. The standard way to estimate it is the <b>Capital Asset Pricing Model (CAPM)</b>:</p>
+    <div class="anatomy"><div class="hint-scroll">← swipe to see the whole formula →</div><div class="agrid" style="grid-template-columns:auto minmax(120px, 180px) auto minmax(120px, 180px) auto minmax(120px, 180px)"><span class="eqlabel" style="grid-column:1;grid-row:3">K<sub>e</sub> =</span><span class="note" style="grid-column:2;grid-row:1;--c:var(--blue)"><b>Risk-free rate</b>the yield on a 10-year government bond in the company’s currency. We use 4%</span><span class="link" style="grid-column:2;grid-row:2;--c:var(--blue)"></span><span class="sym" style="grid-column:2;grid-row:3;--c:var(--blue)">r<sub>f</sub></span><span class="op" style="grid-column:3;grid-row:3">+</span><span class="note" style="grid-column:4;grid-row:5;--c:var(--accent)"><b>Beta</b>how much the share moves with the market: 1 = like the market, &gt;1 = more volatile. Small bakery: 1.25</span><span class="link" style="grid-column:4;grid-row:4;--c:var(--accent)"></span><span class="sym" style="grid-column:4;grid-row:3;--c:var(--accent)">β</span><span class="op" style="grid-column:5;grid-row:3">×</span><span class="note" style="grid-column:6;grid-row:1;--c:#8b5cf6"><b>Market risk premium</b>the extra return stocks have paid over government bonds, commonly 4–6%. We use 5%</span><span class="link" style="grid-column:6;grid-row:2;--c:#8b5cf6"></span><span class="sym" style="grid-column:6;grid-row:3;--c:#8b5cf6">(R<sub>m</sub> − r<sub>f</sub>)</span></div><div class="result">K<sub>e</sub> = 4% + 1.25 × 5% = <b>10.25%</b></div></div>
+    <div class="kv">
+      <div><div class="k">Risk-free rate (r<sub>f</sub>)</div>Use a government bond in the <b>same currency</b> as the cash flows: US Treasuries for dollars, German Bunds for euros, Romanian government bonds for lei (these yield more, because of higher inflation and credit risk).</div>
+      <div><div class="k">Beta (β)</div>Calculated from how the share price moved against an index over several years. Utilities are often below 1, technology and airlines above 1.</div>
+      <div><div class="k">Market risk premium</div>Estimated from history or from today's prices. Professors such as Aswath Damodaran (NYU) publish yearly estimates for every country, adding a country risk premium for riskier markets.</div>
+    </div>
+
+    <h2>Step 4 · Cost of debt: what lenders demand</h2>
+    <div class="anatomy"><div class="hint-scroll">← swipe to see the whole formula →</div><div class="agrid" style="grid-template-columns:auto minmax(120px, 180px) auto minmax(120px, 180px)"><span class="eqlabel" style="grid-column:1;grid-row:3">K<sub>d</sub> after tax =</span><span class="note" style="grid-column:2;grid-row:1;--c:var(--blue)"><b>Pre-tax cost of debt</b>interest rate on the company’s borrowing: 10,000 ÷ 100,000 = 10%</span><span class="link" style="grid-column:2;grid-row:2;--c:var(--blue)"></span><span class="sym" style="grid-column:2;grid-row:3;--c:var(--blue)">K<sub>d</sub></span><span class="op" style="grid-column:3;grid-row:3">×</span><span class="note" style="grid-column:4;grid-row:5;--c:var(--brand)"><b>Tax shield</b>interest is a tax-deductible cost, so the state pays part of it. t = 20%</span><span class="link" style="grid-column:4;grid-row:4;--c:var(--brand)"></span><span class="sym" style="grid-column:4;grid-row:3;--c:var(--brand)">(1 − t)</span></div><div class="result">K<sub>d</sub> after tax = 10% × (1 − 0.20) = <b>8%</b></div></div>
+    <p>For large companies, K<sub>d</sub> is the yield on their bonds, or the risk-free rate plus a <b>credit spread</b> that depends on their rating (bonds lesson).</p>
+
+    <h2>Step 5 · WACC: the blended cost of all the money</h2>
+    <p>The business is financed partly by shareholders and partly by lenders. The <b>weighted average cost of capital</b> mixes their required returns according to how much each provides, using <b>market values</b>: equity at the share price (10,000 shares × $90 = $900,000) and debt of $100,000.</p>
+    <div class="anatomy"><div class="hint-scroll">← swipe to see the whole formula →</div><div class="agrid" style="grid-template-columns:auto minmax(120px, 180px) auto minmax(120px, 180px) auto minmax(120px, 180px) auto minmax(120px, 180px)"><span class="eqlabel" style="grid-column:1;grid-row:3">WACC =</span><span class="note" style="grid-column:2;grid-row:1;--c:var(--brand)"><b>Equity weight</b>900,000 ÷ 1,000,000 = 90%</span><span class="link" style="grid-column:2;grid-row:2;--c:var(--brand)"></span><span class="sym" style="grid-column:2;grid-row:3;--c:var(--brand)">E/V</span><span class="op" style="grid-column:3;grid-row:3">×</span><span class="note" style="grid-column:4;grid-row:5;--c:var(--brand)"><b>Cost of equity</b>10.25% (step 3)</span><span class="link" style="grid-column:4;grid-row:4;--c:var(--brand)"></span><span class="sym" style="grid-column:4;grid-row:3;--c:var(--brand)">K<sub>e</sub></span><span class="op" style="grid-column:5;grid-row:3">+</span><span class="note" style="grid-column:6;grid-row:1;--c:var(--blue)"><b>Debt weight</b>100,000 ÷ 1,000,000 = 10%</span><span class="link" style="grid-column:6;grid-row:2;--c:var(--blue)"></span><span class="sym" style="grid-column:6;grid-row:3;--c:var(--blue)">D/V</span><span class="op" style="grid-column:7;grid-row:3">×</span><span class="note" style="grid-column:8;grid-row:5;--c:var(--blue)"><b>After-tax cost of debt</b>8% (step 4)</span><span class="link" style="grid-column:8;grid-row:4;--c:var(--blue)"></span><span class="sym" style="grid-column:8;grid-row:3;--c:var(--blue)">K<sub>d</sub>(1 − t)</span></div><div class="result">WACC = 0.90 × 10.25% + 0.10 × 8% = 9.225% + 0.8% = <b>10.0%</b> (V = E + D = total financing)</div></div>
+    <div class="callout grandpa"><span class="t">👴 Plain words</span>Every year, the business must earn at least 10% on the money invested in it just to satisfy its owners and lenders. Earning more creates value; earning less destroys it.</div>
+
+    <h2>Step 6 · Forecast and discount five years</h2>
+    <p>Assumption: FCFF grows 5% a year for five years. Each year is discounted at the WACC of 10%.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Year</th><th>FCFF</th><th>(1 + 10%)<sup>t</sup></th><th>Present value</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>69,300</td><td>1.100</td><td>63,000</td></tr>
+        <tr><td>2</td><td>72,765</td><td>1.210</td><td>60,136</td></tr>
+        <tr><td>3</td><td>76,403</td><td>1.331</td><td>57,403</td></tr>
+        <tr><td>4</td><td>80,223</td><td>1.464</td><td>54,794</td></tr>
+        <tr><td>5</td><td>84,235</td><td>1.611</td><td>52,303</td></tr>
+        <tr class="total"><td>Sum</td><td></td><td></td><td>287,636</td></tr>
+      </tbody></table></div>
+
+    <h2>Step 7 · Terminal value and the perpetuity growth rate</h2>
+    <p>The bakery will not close after year 5. Instead of forecasting forever, we assume that after year 5 the cash flow grows at a small, constant rate <b>for ever</b> — the <b>perpetuity growth rate</b> (g). The value of that endless stream at the end of year 5 is the <b>terminal value</b> (Gordon growth formula):</p>
+    <div class="anatomy"><div class="hint-scroll">← swipe to see the whole formula →</div><div class="agrid" style="grid-template-columns:auto minmax(120px, 180px) auto minmax(120px, 180px)"><span class="eqlabel" style="grid-column:1;grid-row:3">TV =</span><span class="note" style="grid-column:2;grid-row:1;--c:var(--brand)"><b>Cash flow in year 6</b>84,235 × 1.02 = 85,920</span><span class="link" style="grid-column:2;grid-row:2;--c:var(--brand)"></span><span class="sym" style="grid-column:2;grid-row:3;--c:var(--brand)">FCFF<sub>5</sub> × (1 + g)</span><span class="op" style="grid-column:3;grid-row:3">÷</span><span class="note" style="grid-column:4;grid-row:5;--c:var(--accent)"><b>Discount minus growth</b>10% − 2% = 8%. g must be below WACC, or the value becomes infinite</span><span class="link" style="grid-column:4;grid-row:4;--c:var(--accent)"></span><span class="sym" style="grid-column:4;grid-row:3;--c:var(--accent)">(WACC − g)</span></div><div class="result">TV = 85,920 ÷ 0.08 = <b>1,073,991</b> at the end of year 5 → today: 1,073,991 ÷ 1.611 = <b>666,864</b></div></div>
+    <div class="kv">
+      <div><div class="k">Choosing g</div>No company can grow faster than the whole economy forever, so g is usually set around long-run inflation plus real growth: often 2–3% for developed countries.</div>
+      <div><div class="k">The alternative: exit multiple</div>Value the business in year 5 at a typical EV/EBITDA multiple. EBITDA in year 5 ≈ 165,900 × 7 = 1,161,400 → today 721,100. Comparing both methods is a good sanity check.</div>
+      <div><div class="k">Warning</div>Here the terminal value is <b>70%</b> of the total. Small changes in g or WACC move the result a lot (step 9).</div>
+    </div>
+
+    <h2>Step 8 · From enterprise value to value per share</h2>
+    <div class="statement">
+      <div class="st-title">DCF result <small>Rat Bakery</small></div>
+      <div class="arow "><div class="line"><span>PV of years 1–5</span><span class="v">287,636</span></div><div class="arrow"></div>
+        <div class="note">Step 6.</div></div>      <div class="arow "><div class="line"><span>+ PV of terminal value</span><span class="v">666,864</span></div><div class="arrow"></div>
+        <div class="note">Step 7.</div></div>      <div class="arow total"><div class="line"><span>= Enterprise value (EV)</span><span class="v">954,500</span></div><div class="arrow"></div>
+        <div class="note">The value of the whole business, for lenders and shareholders.</div></div>      <div class="arow minus"><div class="line"><span>− Net debt (100,000 − 60,000 cash)</span><span class="v">(40,000)</span></div><div class="arrow"></div>
+        <div class="note">Belongs to the bank, after using the cash to repay part of it.</div></div>      <div class="arow total"><div class="line"><span>= Equity value</span><span class="v">914,500</span></div><div class="arrow"></div>
+        <div class="note">What belongs to the shareholders.</div></div>      <div class="arow key"><div class="line"><span>÷ 10,000 shares</span><span class="v">91.45</span></div><div class="arrow"></div>
+        <div class="note">Under these assumptions: <b>$91.45 per share</b>, close to the $90 asking price. The price implies roughly these assumptions.</div></div>
+    </div>
+
+    <h2>Step 9 · Sensitivity: how much the assumptions matter</h2>
+    <div class="table-wrap"><table class="sens">
+      <thead><tr><th>WACC ↓ / growth years 1–5 →</th><th>3%</th><th>5%</th><th>7%</th></tr></thead>
+      <tbody>
+        <tr><td>9%</td><td>96.39</td><td>105.31</td><td>114.89</td></tr>
+        <tr><td>10%</td><td>83.78</td><td class="mid">91.45</td><td>99.68</td></tr>
+        <tr><td>11%</td><td>73.97</td><td>80.67</td><td>87.86</td></tr>
+      </tbody></table></div>
+    <p>And the perpetuity growth rate: g = 1% → $83.46; g = 2% → $91.45; g = 3% → $101.72. One percentage point of "forever growth" moves the value by about 10%.</p>
+
+    <h2>Common mistakes</h2>
+    <ul>
+      <li>Using FCF <i>after</i> interest with the WACC (mixing equity and firm cash flows).</li>
+      <li>A perpetuity growth rate above long-run economic growth, or above the WACC.</li>
+      <li>A risk-free rate in a different currency from the cash flows.</li>
+      <li>Forgetting to subtract debt (and other claims such as minority interests or pension deficits) to get from EV to equity.</li>
+      <li>Treating the result as a precise answer instead of a range.</li>
+    </ul>
+    <p>Our <a href="/analyze/">company analysis</a> uses this method in simplified form: it starts from each company's own 10-year history and lets you move every assumption.</p>
+    <div class="quiz"><b>✏️ Check yourself:</b> If the risk-free rate rises from 4% to 5%, what happens to the cost of equity, the WACC and the value?
+      <details><summary>Show the answer</summary><p>K<sub>e</sub> rises to 11.25%, the WACC to about 10.9%, and the value per share falls (to about $81 in this example). This is why share prices often fall when interest rates rise.</p></details>
+    </div>
+    <div class="ad-slot" data-slot="middle"></div>
+    <nav class="lesson-pager" id="lesson-pager"></nav>
+  </article>
+</main>
+<div id="site-footer"></div>
+<script type="module" src="/js/site.js"></script>
+<script type="module" src="/js/learn.js"></script>
+</body>
+</html>

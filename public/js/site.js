@@ -36,12 +36,12 @@ function footer() {
         <p class="muted small" style="margin-top:12px">Learn, calculate and analyze companies in one simple place.</p>
       </div>
       <div><h4>Learn</h4><ul>
+        <li><a href="/learn/financial-markets.html">Stocks, bonds &amp; markets</a></li>
+        <li><a href="/learn/gold-and-silver.html">Gold &amp; silver</a></li>
         <li><a href="/learn/income-statement.html">Income statement</a></li>
-        <li><a href="/learn/balance-sheet.html">Balance sheet</a></li>
-        <li><a href="/learn/cash-flow.html">Cash flow statement</a></li>
         <li><a href="/learn/ratios.html">Financial ratios</a></li>
-        <li><a href="/learn/valuation.html">Valuation: DCF, P/E, EV/EBITDA</a></li>
-        <li><a href="/learn/case-studies.html">3 real company case studies</a></li>
+        <li><a href="/learn/dcf.html">DCF step by step</a></li>
+        <li><a href="/learn/industries.html">7 industry case studies</a></li>
       </ul></div>
       <div><h4>Calculators</h4><ul>
         <li><a href="/calculators/compound-interest.html">Compound interest</a></li>

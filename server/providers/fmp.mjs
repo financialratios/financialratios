@@ -97,6 +97,7 @@ export async function fmpCompany(symbol, key, fetchImpl = fetch) {
   const company = {
     source: 'Financial Modeling Prep',
     isDemo: false,
+    reportingCurrency: (income || [])[0]?.reportedCurrency || pr.currency || 'USD',
     profile: {
       symbol: pr.symbol,
       name: pr.companyName,
@@ -129,12 +130,20 @@ export async function fmpCompany(symbol, key, fetchImpl = fetch) {
 }
 
 export async function fmpPrices(symbol, key, fetchImpl = fetch) {
-  const rows = await get('historical-price-eod/light', { symbol, from: '1960-01-01', to: new Date().toISOString().slice(0, 10) }, key, fetchImpl);
+  const rows = await get('historical-price-eod/full', { symbol, from: '1960-01-01', to: new Date().toISOString().slice(0, 10) }, key, fetchImpl);
   const list = (Array.isArray(rows) ? rows : rows?.historical || [])
-    .map((r) => [r.date, r.price ?? r.close])
-    .filter(([d, c]) => d && typeof c === 'number')
-    .sort((a, b) => a[0].localeCompare(b[0]));
-  return { source: 'Financial Modeling Prep', dates: list.map((r) => r[0]), close: list.map((r) => r[1]) };
+    .filter((r) => r.date && typeof (r.close ?? r.price) === 'number')
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const c = (r) => r.close ?? r.price;
+  return {
+    source: 'Financial Modeling Prep',
+    dates: list.map((r) => r.date),
+    open: list.map((r) => r.open ?? c(r)),
+    high: list.map((r) => r.high ?? c(r)),
+    low: list.map((r) => r.low ?? c(r)),
+    close: list.map(c),
+    volume: list.map((r) => r.volume ?? 0),
+  };
 }
 
 export async function fmpSearch(query, key, fetchImpl = fetch) {
