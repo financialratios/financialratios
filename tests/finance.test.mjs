@@ -129,3 +129,24 @@ test('what-if investment: price gain, dividends kept as cash or reinvested', asy
   near(re.annualReturn, 2.1 ** (1 / re.years) - 1, 1e-9);
   assert.equal(investmentSince({ prices, startDate: '2030-01-01', amount: 1000 }), null);
 });
+
+test('portfolio: average cost, partial sale, realized gain, currency conversion', async () => {
+  const { portfolioSummary } = await import('../public/js/lib/finance.js');
+  const tx = [
+    { symbol: 'AAA', type: 'buy', shares: 10, price: 100, date: '2020-01-01' },
+    { symbol: 'AAA', type: 'buy', shares: 10, price: 200, date: '2021-01-01' },
+    { symbol: 'AAA', type: 'sell', shares: 5, price: 300, date: '2022-01-01' },
+    { symbol: 'BBB', type: 'buy', shares: 2, price: 50, date: '2022-01-01' },
+  ];
+  const quotes = { AAA: { price: 250, change: 5, currency: 'USD' }, BBB: { price: 60, change: -1, currency: 'EUR' } };
+  const { rows, totals } = portfolioSummary(tx, quotes, { USD: 1, EUR: 1.1 });
+  const a = rows.find((r) => r.symbol === 'AAA'), b = rows.find((r) => r.symbol === 'BBB');
+  near(a.shares, 15); near(a.avgCost, 150); near(a.realized, 5 * (300 - 150));
+  near(a.value, 3750); near(a.gain, 3750 - 2250);
+  near(b.value, 2 * 60 * 1.1); near(b.gain, (120 - 100) * 1.1);
+  near(totals.value, 3750 + 132);
+  near(totals.dayChange, 15 * 5 - 2 * 1.1);
+  near(a.weight + b.weight, 1, 1e-12);
+  const missing = portfolioSummary([{ symbol: 'ZZZ', type: 'buy', shares: 1, price: 1 }], {}, {});
+  assert.deepEqual(missing.totals.missing, ['ZZZ']);
+});

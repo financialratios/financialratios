@@ -414,3 +414,57 @@ export function investmentSince({ prices, dividends = [], startDate, amount, rei
     priceOnlyReturn: close[last] / buyPrice - 1, series,
   };
 }
+
+/**
+ * Portfolio tracker maths. Transactions: [{ symbol, type: 'buy'|'sell', shares, price, date }], prices in the
+ * stock's own currency. quotes: { SYMBOL: { price, change, currency, name } }; fx: { CUR: value of 1 CUR in base }.
+ * Uses the average-cost method: a sale removes shares at the average price paid so far.
+ */
+export function portfolioSummary(transactions, quotes = {}, fx = {}) {
+  const bySymbol = new Map();
+  const sorted = [...transactions].sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  for (const t of sorted) {
+    const h = bySymbol.get(t.symbol) || { symbol: t.symbol, shares: 0, cost: 0, realized: 0, firstDate: t.date || null, count: 0 };
+    h.count++;
+    if (t.type === 'sell') {
+      const sold = Math.min(t.shares, h.shares);
+      const avg = h.shares > 0 ? h.cost / h.shares : 0;
+      h.realized += sold * (t.price - avg);
+      h.cost -= sold * avg;
+      h.shares -= sold;
+    } else {
+      h.shares += t.shares;
+      h.cost += t.shares * t.price;
+    }
+    bySymbol.set(t.symbol, h);
+  }
+  const rows = [];
+  const totals = { value: 0, cost: 0, unrealized: 0, realized: 0, dayChange: 0, missing: [] };
+  for (const h of bySymbol.values()) {
+    const q = quotes[h.symbol] || {};
+    const rate = q.currency ? fx[q.currency] : 1;
+    const ok = isNum(q.price) && isNum(rate);
+    const shares = Math.abs(h.shares) < 1e-9 ? 0 : h.shares;
+    const row = {
+      symbol: h.symbol, name: q.name || h.symbol, currency: q.currency || '', shares,
+      avgCost: shares > 0 ? h.cost / shares : null, price: ok ? q.price : null,
+      value: ok ? shares * q.price * rate : null, costBase: isNum(rate) ? h.cost * rate : null,
+      realized: isNum(rate) ? h.realized * rate : null, transactions: h.count, firstDate: h.firstDate,
+      dayChange: ok && isNum(q.change) ? shares * q.change * rate : null,
+    };
+    row.gain = isNum(row.value) && isNum(row.costBase) ? row.value - row.costBase : null;
+    row.gainPct = isNum(row.gain) && row.costBase > 0 ? row.gain / row.costBase : null;
+    if (!ok && shares > 0) totals.missing.push(h.symbol);
+    if (isNum(row.value)) totals.value += row.value;
+    if (isNum(row.costBase) && isNum(row.value)) totals.cost += row.costBase;
+    if (isNum(row.gain)) totals.unrealized += row.gain;
+    if (isNum(row.realized)) totals.realized += row.realized;
+    if (isNum(row.dayChange)) totals.dayChange += row.dayChange;
+    rows.push(row);
+  }
+  for (const r of rows) r.weight = totals.value > 0 && isNum(r.value) ? r.value / totals.value : null;
+  rows.sort((a, b) => (b.value ?? -1) - (a.value ?? -1));
+  totals.gainPct = totals.cost > 0 ? totals.unrealized / totals.cost : null;
+  totals.dayChangePct = totals.value - totals.dayChange > 0 ? totals.dayChange / (totals.value - totals.dayChange) : null;
+  return { rows, totals };
+}

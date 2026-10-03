@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolio tracker — Financial Rat</title>
+  <meta name="description" content="Free, private portfolio tracker: add your stocks, see their value today, your gains and losses, allocation and history. No account needed; your data stays in your browser.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main" class="container" style="padding-top:28px">
+  <p class="small"><a href="/calculators/">← All calculators</a></p>
+  <div class="toolbar">
+    <div><h1 style="margin-bottom:4px">💼 Portfolio tracker</h1>
+      <p class="muted" style="margin:0">Add the shares you own and see what they are worth today. No account needed.</p></div>
+    <div class="pf-actions">
+      <label class="small" for="pf-base" style="margin:0;align-self:center">Show totals in</label>
+      <select id="pf-base" style="width:auto;min-height:44px"></select>
+      <button class="btn btn-ghost btn-sm" id="pf-refresh" type="button">🔄 Refresh prices</button>
+    </div>
+  </div>
+  <div class="notice small" style="margin-top:14px">🔒 <b>Private:</b> your portfolio is saved only in this browser, on this device. Nobody else (not even us) can see it.
+    Use <b>Save a backup</b> to keep a copy or move it to another device.</div>
+
+  <div class="kpis" id="pf-kpis"></div>
+
+  <div class="split pf-split">
+    <form class="card calc-form" id="pf-form" autocomplete="off">
+      <h2 style="margin:0">➕ Add a transaction</h2>
+      <div class="seg-btns" id="pf-type" style="justify-self:start"><button type="button" data-t="buy" class="active">Bought</button><button type="button" data-t="sell">Sold</button></div>
+      <div><label for="pf-symbol">Ticker</label><input type="text" id="pf-symbol" list="pf-tickers" placeholder="e.g. AAPL, KO, 7203.T" required spellcheck="false">
+        <datalist id="pf-tickers"></datalist><span class="hint" id="pf-symbol-hint">Type a ticker or a company name and pick from the list.</span></div>
+      <div class="pf-row">
+        <div><label for="pf-shares">Number of shares</label><input type="number" id="pf-shares" min="0" step="any" required></div>
+        <div><label for="pf-price">Price per share</label><input type="number" id="pf-price" min="0" step="any" required>
+          <button type="button" class="linkbtn" id="pf-today">use today's price</button></div>
+      </div>
+      <div><label for="pf-date">Date</label><input type="date" id="pf-date" class="date-input"></div>
+      <button class="btn btn-primary" type="submit">Add to my portfolio</button>
+      <div id="pf-msg" aria-live="polite"></div>
+    </form>
+    <div class="card"><h2 style="margin-top:0">🥧 What I own</h2>
+      <div class="donut-wrap"><div class="chart-box short"><canvas id="pf-donut" aria-label="Allocation"></canvas></div><ul class="legend-list" id="pf-legend"></ul></div>
+      <div id="pf-alloc-note"></div></div>
+  </div>
+
+  <div class="card" style="margin-top:20px"><div class="toolbar"><h2 style="margin:0">📋 My holdings</h2><span class="small muted" id="pf-asof"></span></div>
+    <div class="table-wrap" id="pf-table" style="margin-top:12px"></div></div>
+
+  <div class="split pf-split2">
+    <div class="card"><h2 style="margin-top:0">📊 Gain or loss by holding</h2><div class="chart-box"><canvas id="pf-gains"></canvas></div></div>
+    <div class="card"><h2 style="margin-top:0">📈 Value over time</h2><div class="chart-box" id="pf-history-box"><canvas id="pf-history"></canvas></div>
+      <p class="small muted" id="pf-history-note" style="margin:8px 0 0"></p></div>
+  </div>
+
+  <details class="card" style="margin-top:20px" id="pf-tx-box"><summary style="cursor:pointer;font-weight:800">🧾 All my transactions</summary>
+    <div class="table-wrap" id="pf-tx" style="margin-top:12px"></div></details>
+
+  <div class="pf-actions" style="margin-top:20px;justify-content:flex-start">
+    <button class="btn btn-ghost btn-sm" id="pf-export" type="button">💾 Save a backup (CSV)</button>
+    <label class="btn btn-ghost btn-sm" style="margin:0">📂 Restore a backup<input type="file" id="pf-import" accept=".csv,text/csv" hidden></label>
+    <button class="btn btn-ghost btn-sm" id="pf-sample" type="button">🧪 Try an example portfolio</button>
+    <button class="btn btn-ghost btn-sm" id="pf-clear" type="button">🗑️ Delete everything</button>
+  </div>
+
+  <div class="narrow" style="margin-top:32px">
+    <h2>How the numbers are calculated</h2>
+    <ul>
+      <li><b>Value</b> = number of shares × today's price, converted into your chosen currency at today's exchange rate.</li>
+      <li><b>Gain or loss</b> = value − what you paid. When you sell part of a holding, the shares sold are counted at your <b>average price paid</b> (the average-cost method), and the profit on them appears as a <b>realised gain</b>.</li>
+      <li><b>Today</b> = how much the value moved since the previous trading day's close.</li>
+      <li>Prices can be delayed. Dividends, fees and taxes are not included. For education only, not advice.</li>
+    </ul>
+  </div>
+  <div class="ad-slot" data-slot="bottom"></div>
+</main>
+<div id="site-footer"></div>
+<script src="/vendor/chart.umd.min.js"></script>
+<script type="module" src="/js/site.js"></script>
+<script type="module" src="/js/portfolio.js"></script>
+</body>
+</html>
