@@ -2,7 +2,7 @@
   "name": "financial-rat",
   "version": "0.1.0",
   "private": true,
-  "description": "Financial Rat — Finance For All, All For Finance. Learn, calculate and analyze companies in one simple place.",
+  "description": "Financial Rat \u2014 Finance For All, All For Finance. Learn, calculate and analyze companies in one simple place.",
   "type": "module",
   "engines": {
     "node": ">=18"
@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node server/dev.mjs",
     "test": "node --test tests/*.test.mjs",
-    "set-adsense": "node scripts/set-adsense.mjs"
+    "set-adsense": "node scripts/set-adsense.mjs",
+    "seo": "node scripts/seo.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^10.7.13"
