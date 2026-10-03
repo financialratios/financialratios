@@ -6,7 +6,7 @@ export const SITE = {
 
   // Google AdSense. Easiest: run `npm run set-adsense -- ca-pub-1234567890123456`
   // which fills this in AND adds the verification code to every page.
-  adsenseClient: '', // e.g. 'ca-pub-1234567890123456'
+  adsenseClient: 'ca-pub-5021141099891568', // e.g. 'ca-pub-1234567890123456'
   // Optional: ad unit IDs you create in AdSense (Ads > By ad unit). Leave empty to use Auto ads only.
   adSlots: {
     top: '',
