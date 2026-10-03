@@ -1,6 +1,7 @@
 // "Download" button: the three financial statements, laid out like Yahoo Finance
 // (numbers in thousands, sections in bold with indented sub-lines, years from oldest to newest),
 // as an Excel workbook or a PDF. Libraries load only when someone clicks.
+// Numbers the data source does not provide are marked with * and explained in a note under the table.
 import { INCOME_LAYOUT, BALANCE_LAYOUT, CASHFLOW_LAYOUT, RATIO_ROWS, layoutValue } from './rows.js';
 import { yearlyRatios } from './lib/finance.js';
 
@@ -27,7 +28,9 @@ const STATEMENTS = [
   ['Cash Flow', 'cashflow', CASHFLOW_LAYOUT],
 ];
 
-/** Lines with at least one reported value, each with its values newest-first, scaled for display. */
+export const MISSING = '*';
+
+/** Lines with at least one reported value, each with its values oldest-first, scaled for display. */
 function buildTable(company, key, layout) {
   const years = company[key]; // oldest year first, newest on the right
   const lines = [];
@@ -43,6 +46,30 @@ function buildTable(company, key, layout) {
   return { years, lines };
 }
 
+const yearList = (ys) => ys.map((y) => `FY${y.fiscalYear}`).join(', ');
+
+/** The notes printed under a statement: why each * cell is empty. Empty list when nothing is missing. */
+export function missingNotes(company, title, { years, lines }) {
+  const data = lines.filter((l) => !l.spacer);
+  if (!data.some((l) => l.values.some((v) => v == null))) return [];
+  const emptyYear = years.map((_, i) => data.every((l) => l.values[i] == null));
+  const notes = [`${MISSING} Data not available:`];
+  const blank = years.filter((_, i) => emptyYear[i]);
+  if (blank.length) notes.push(`${MISSING} ${yearList(blank)}: ${company.source} has no ${title.toLowerCase()} figures for ${blank.length > 1 ? 'these years' : 'this year'}.`);
+  for (const l of data) {
+    const ys = years.filter((_, i) => l.values[i] == null && !emptyYear[i]);
+    if (!ys.length) continue;
+    const why = l.calc
+      ? 'cannot be calculated, because a line it is worked out from is missing'
+      : `not reported by the company, or not provided by ${company.source}`;
+    notes.push(`${MISSING} ${l.label} (${yearList(ys)}): ${why}.`);
+  }
+  return notes;
+}
+
+const RATIO_NOTE = `${MISSING} Not available: a number needed for the ratio was not reported that year, or the ratio is not meaningful `
+  + '(for example negative profit or equity, or no interest expense).';
+
 function triggerDownload(blob, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -53,6 +80,12 @@ function triggerDownload(blob, name) {
 }
 
 // ---------------- Excel ----------------
+function addNotes(ws, notes) {
+  if (!notes.length) return;
+  ws.addRow([]);
+  notes.forEach((t, i) => { ws.addRow([t]).getCell(1).font = { italic: i > 0, bold: i === 0 && notes.length > 1, size: 9, color: { argb: 'FF66738A' } }; });
+}
+
 export async function downloadExcel(company) {
   await loadScript('/vendor/exceljs.min.js');
   const ExcelJS = window.ExcelJS;
@@ -80,15 +113,17 @@ export async function downloadExcel(company) {
     }
     for (const line of lines) {
       if (line.spacer) { ws.addRow([]); continue; }
-      const row = ws.addRow([line.label, ...line.values]);
+      const row = ws.addRow([line.label, ...line.values.map((v) => v ?? MISSING)]);
       row.getCell(1).alignment = { indent: line.level * 2 };
       row.eachCell((cell, col) => {
         if (line.bold) cell.font = { bold: true };
         if (line.bold && line.level === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: SECTION } };
         if (col > 1) cell.numFmt = line.kind === 'pershare' ? '0.00;[Red]-0.00' : '#,##0;[Red](#,##0)';
+        if (col > 1 && cell.value === MISSING) { cell.alignment = { horizontal: 'right' }; cell.font = { ...cell.font, color: { argb: 'FF66738A' } }; }
       });
       row.getCell(1).border = line.bold && line.level === 0 ? { top: { style: 'thin', color: { argb: 'FFDDE3EE' } } } : undefined;
     }
+    addNotes(ws, missingNotes(company, title, { years, lines }));
   }
 
   // Ratios, oldest to newest.
@@ -96,8 +131,9 @@ export async function downloadExcel(company) {
   const rs = wb.addWorksheet('Ratios', { views: [{ state: 'frozen', xSplit: 1, ySplit: 3 }] });
   rs.columns = [{ width: 40 }, ...ratios.map(() => ({ width: 12 }))];
   rs.addRow([`${profile.name} (${profile.symbol}) — Financial ratios (calculated by Financial Rat)`]).font = { bold: true, size: 14 };
-  rs.addRow(['Empty cell = not reported, or not meaningful that year (e.g. negative profit).']).font = { italic: true, color: { argb: 'FF66738A' } };
+  rs.addRow([`${MISSING} = not available that year (see the note under the table, if any).`]).font = { italic: true, color: { argb: 'FF66738A' } };
   const rh = rs.addRow(['Ratio', ...ratios.map((r) => `FY${r.fiscalYear}`)]);
+  let ratiosMissing = false;
   rh.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN } }; cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; });
   for (const r of RATIO_ROWS) {
     if (r.group) {
@@ -106,10 +142,16 @@ export async function downloadExcel(company) {
       g.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: SECTION } };
       continue;
     }
-    const row = rs.addRow([r.label, ...ratios.map((y) => (typeof y[r.key] === 'number' && Number.isFinite(y[r.key]) ? y[r.key] : null))]);
+    const row = rs.addRow([r.label, ...ratios.map((y) => (typeof y[r.key] === 'number' && Number.isFinite(y[r.key]) ? y[r.key] : MISSING))]);
+    if (row.values.includes(MISSING)) ratiosMissing = true;
     row.getCell(1).alignment = { indent: 2 };
-    row.eachCell((cell, col) => { if (col > 1) cell.numFmt = r.fmt === 'pct' ? '0.0%' : '0.00"x"'; });
+    row.eachCell((cell, col) => {
+      if (col === 1) return;
+      if (cell.value === MISSING) { cell.alignment = { horizontal: 'right' }; cell.font = { color: { argb: 'FF66738A' } }; }
+      else cell.numFmt = r.fmt === 'pct' ? '0.0%' : '0.00"x"';
+    });
   }
+  addNotes(rs, ratiosMissing ? [RATIO_NOTE] : []);
 
   const about = wb.addWorksheet('About');
   about.columns = [{ width: 18 }, { width: 100 }];
@@ -126,6 +168,23 @@ export async function downloadExcel(company) {
 // The built-in PDF font has no typographic minus or em dash.
 const pdfSafe = (t) => String(t).replace(/[−–]/g, '-').replace(/—/g, '-');
 
+/** Notes under the last table, continuing on a new page when they do not fit. */
+function pdfNotes(doc, notes) {
+  if (!notes.length) return;
+  const H = doc.internal.pageSize.getHeight(), width = doc.internal.pageSize.getWidth() - 72;
+  let y = doc.lastAutoTable.finalY + 16;
+  doc.setFontSize(8);
+  doc.setTextColor(102, 115, 138);
+  notes.forEach((t, i) => {
+    doc.setFont('helvetica', i === 0 && notes.length > 1 ? 'bold' : 'italic');
+    for (const part of doc.splitTextToSize(pdfSafe(t), width)) {
+      if (y > H - 34) { doc.addPage(); y = 40; }
+      doc.text(part, 36, y);
+      y += 11;
+    }
+  });
+}
+
 export async function downloadPdf(company) {
   await loadScript('/vendor/jspdf.umd.min.js');
   await loadScript('/vendor/jspdf.plugin.autotable.min.js');
@@ -134,7 +193,7 @@ export async function downloadPdf(company) {
   const { profile } = company;
   const cur = curOf(company);
   const W = doc.internal.pageSize.getWidth();
-  const fmt = (v, kind) => (v == null ? '-' : kind === 'pershare' ? v.toFixed(2)
+  const fmt = (v, kind) => (v == null ? MISSING : kind === 'pershare' ? v.toFixed(2)
     : `${v < 0 ? '(' : ''}${Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}${v < 0 ? ')' : ''}`);
 
   const header = () => {
@@ -181,8 +240,10 @@ export async function downloadPdf(company) {
         if (line.bold && line.level === 0) d.cell.styles.fillColor = [238, 241, 247];
         if (d.column.index === 0) d.cell.styles.cellPadding = { top: 3, bottom: 3, left: 4 + line.level * 14, right: 4 };
         if (d.column.index > 0 && typeof d.cell.raw === 'string' && d.cell.raw.startsWith('(')) d.cell.styles.textColor = [214, 69, 69];
+        if (d.column.index > 0 && d.cell.raw === MISSING) d.cell.styles.textColor = [102, 115, 138];
       },
     });
+    pdfNotes(doc, missingNotes(company, title, { years, lines }));
   });
 
   const pages = doc.internal.getNumberOfPages();

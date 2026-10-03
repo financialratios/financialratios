@@ -12,7 +12,6 @@ import { yahooChart, yahooCompany, yahooFx, yahooProfile, yahooSearch } from './
 import { demoCompany, demoPrices } from './demo.mjs';
 import { SITE } from '../public/js/config.js';
 import { handleReviews } from './reviews.mjs';
-import { handlePayments } from './payments.mjs';
 
 const SYMBOL_RE = /^[A-Za-z0-9.\-^=]{1,20}$/;
 const cache = new Map();
@@ -158,10 +157,6 @@ export async function handleApi(url, env = process.env, req = {}) {
   const cfg = config(env);
   const route = url.pathname.replace(/\/+$/, '').split('/').pop();
   try {
-    if (['license', 'download', 'gumroad-ping', 'plans'].includes(route)) {
-      const [status, body] = await handlePayments(route, { method: req.method || 'GET', url, body: req.body, env });
-      return json(status, body);
-    }
     if (route === 'reviews') {
       const [status, body] = await handleReviews({ method: req.method || 'GET', url, body: req.body, ip: req.ip, env });
       return json(status, body);
