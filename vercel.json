@@ -1,4 +1,16 @@
 {
   "outputDirectory": "public",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/premium",
+      "destination": "/analyze/",
+      "permanent": true
+    },
+    {
+      "source": "/premium.html",
+      "destination": "/analyze/",
+      "permanent": true
+    }
+  ]
 }

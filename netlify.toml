@@ -10,3 +10,9 @@
   for = "/vendor/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# The paid plans were removed: send old links to the company analyzer.
+[[redirects]]
+  from = "/premium.html"
+  to = "/analyze/"
+  status = 301
