@@ -7,6 +7,7 @@ import { compact, money, pct, signedPct, times, plain, millions, words, escapeHt
 import { barChart, lineChart, donutChart, palette } from './charts.js';
 import { INCOME_ROWS, BALANCE_ROWS, CASHFLOW_ROWS, RATIO_ROWS } from './rows.js';
 import { downloadExcel, downloadPdf } from './export.js';
+import { track } from './track.js';
 import { profileFor, SUGGESTIONS } from './profiles.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -106,6 +107,7 @@ async function load(raw) {
   }
   Object.assign(state, { company, prices: null });
   render(company);
+  track('analyze_company', { symbol: company.profile.symbol, company_name: company.profile.name });
   const prices = await pricesPromise;
   if (state.company !== company) return; // user searched something else meanwhile
   state.prices = prices.error ? null : prices;
@@ -353,7 +355,10 @@ function wireDownload(c) {
     toggle(false);
     const label = btn.textContent;
     btn.textContent = '⏳ Preparing file…';
-    try { await (b.dataset.dl === 'xlsx' ? downloadExcel(c) : downloadPdf(c)); }
+    try {
+      await (b.dataset.dl === 'xlsx' ? downloadExcel(c) : downloadPdf(c));
+      track('download_statements', { symbol: c.profile.symbol, file_type: b.dataset.dl });
+    }
     catch (err) { alert(`Sorry, the download failed: ${err.message}`); }
     btn.textContent = label;
   }));

@@ -1,5 +1,6 @@
 // Reviews page: show what visitors wrote and let them add their own.
 import { escapeHtml } from './lib/format.js';
+import { track } from './track.js';
 
 const $ = (s) => document.querySelector(s);
 let all = [], topics = [], rating = 0;
@@ -67,6 +68,7 @@ $('#review-form').addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+    track('post_review', { rating });
     all.unshift(data.review);
     summary();
     paint();

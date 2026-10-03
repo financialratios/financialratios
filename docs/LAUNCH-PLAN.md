@@ -51,6 +51,10 @@ AdSense approves sites that have original, useful content. The lessons and calcu
 5. After approval, either turn on **Auto ads**, or create 3 display ad units and paste their slot IDs into `adSlots` in `public/js/config.js` (`top`, `middle`, `bottom`).
 
 ## Step 7: Help people find the site (ongoing)
+Visitors are counted by **Google Analytics** (ID `G-FCZHDR1HTV`, tag in the `<head>` of every page). Besides page views it records these events
+(Analytics → Reports → Engagement → Events): `analyze_company` (with the ticker), `download_statements` (ticker and xlsx/pdf),
+`use_calculator` (which calculator) and `post_review` (star rating). To see tickers or calculators in reports, register `symbol`,
+`file_type`, `calculator` and `rating` once under Admin → Custom definitions → Create custom dimension (scope: Event).
 1. Add the site to **Google Search Console** (https://search.google.com/search-console) and submit `https://yourdomain/sitemap.xml`.
 2. Share the lessons and calculators on Reddit (r/investing, r/personalfinance, r/eupersonalfinance), in Romanian finance groups, and on TikTok or Instagram with short "explained simply" videos.
 
