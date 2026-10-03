@@ -55,6 +55,7 @@ Visitors are counted by **Google Analytics** (ID `G-FCZHDR1HTV`, tag in the `<he
 (Analytics → Reports → Engagement → Events): `analyze_company` (with the ticker), `download_statements` (ticker and xlsx/pdf),
 `use_calculator` (which calculator) and `post_review` (star rating). To see tickers or calculators in reports, register `symbol`,
 `file_type`, `calculator` and `rating` once under Admin → Custom definitions → Create custom dimension (scope: Event).
+After adding or renaming a page, run `npm run seo`: it updates the sharing previews, Google's structured data and `sitemap.xml`.
 1. Add the site to **Google Search Console** (https://search.google.com/search-console) and submit `https://yourdomain/sitemap.xml`.
 2. Share the lessons and calculators on Reddit (r/investing, r/personalfinance, r/eupersonalfinance), in Romanian finance groups, and on TikTok or Instagram with short "explained simply" videos.
 
