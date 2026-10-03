@@ -1,7 +1,7 @@
 // ===== The only file you need to edit to change site-wide settings. =====
 export const SITE = {
   name: 'Financial Rat',
-  url: 'https://www.financialrat.com', // your real domain once you buy it
+  url: 'https://financialrat.com', // your real domain once you buy it
   contactEmail: 'hello@financialrat.com', // shown on the Contact / Privacy pages
 
   // Google AdSense. Easiest: run `npm run set-adsense -- ca-pub-1234567890123456`
