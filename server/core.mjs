@@ -115,6 +115,26 @@ async function search(q, cfg) {
   return { results };
 }
 
+/** Latest price for several symbols, plus exchange rates into the chosen base currency. */
+async function getQuotes(symbols, base) {
+  const one = (sym) => cached(`q:${sym}`, async () => {
+    if (sym === 'DEMO') {
+      const p = demoPrices(), n = p.close.length;
+      return { symbol: sym, name: 'Rat Industries (sample company)', currency: 'USD', price: p.close[n - 1], change: p.close[n - 1] - p.close[n - 2], changePercent: (p.close[n - 1] / p.close[n - 2] - 1) * 100 };
+    }
+    const c = await yahooChart(sym, { range: '5d' });
+    let { price, change, currency } = c.meta;
+    // London prices are quoted in pence (GBp): convert to pounds.
+    if (currency === 'GBp') { price /= 100; change = change == null ? null : change / 100; currency = 'GBP'; }
+    return { symbol: sym, name: c.meta.name || sym, exchange: c.meta.exchange, currency: currency || 'USD', price, change, changePercent: c.meta.changePercent };
+  }).catch((e) => ({ symbol: sym, error: e.message }));
+  const quotes = await Promise.all(symbols.map(one));
+  const fx = { [base]: 1 };
+  const currencies = [...new Set(quotes.map((q) => q.currency).filter((c) => c && c !== base))];
+  await Promise.all(currencies.map(async (cur) => { fx[cur] = await cached(`fx:${cur}${base}`, () => yahooFx(cur, base)).catch(() => null); }));
+  return { base, quotes, fx, asOf: new Date().toISOString() };
+}
+
 function json(status, body, maxAge = 0) {
   return {
     status,
@@ -149,6 +169,14 @@ export async function handleApi(url, env = process.env, req = {}) {
       if (!SYMBOL_RE.test(symbol)) return json(400, { error: 'That does not look like a ticker symbol (for example AAPL or MSFT).' });
       const fn = route === 'company' ? getCompany : getPrices;
       return json(200, await cached(`${route}:${symbol}`, () => fn(symbol, cfg)), 3600);
+    }
+    if (route === 'quote') {
+      const symbols = [...new Set((url.searchParams.get('symbols') || '').split(',').map((x) => x.trim().toUpperCase()).filter(Boolean))];
+      const base = (url.searchParams.get('base') || 'USD').toUpperCase();
+      if (!symbols.length || symbols.length > 40 || !symbols.every((x) => SYMBOL_RE.test(x)) || !/^[A-Z]{3}$/.test(base)) {
+        return json(400, { error: 'Give 1 to 40 ticker symbols and a 3-letter currency.' });
+      }
+      return json(200, await getQuotes(symbols, base), 300);
     }
     if (route === 'status') {
       return json(200, { provider: cfg.fmpKey ? 'Financial Modeling Prep' : 'Free mode: SEC EDGAR + Yahoo Finance' });
