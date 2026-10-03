@@ -28,7 +28,7 @@ Netlify's free plan allows commercial sites (Vercel's free plan does not, so use
 3. Leave the build settings as they are (they are read from `netlify.toml`).
 4. **Site configuration → Environment variables**, add:
    * `FMP_API_KEY` = your key from step 2
-   * `SEC_USER_AGENT` = `Financial Rat your@email.com`
+   * Optional: `SEC_USER_AGENT` (Key) with the value `Financial Rat` + your email. Without it, the contact email from `public/js/config.js` is used.
 5. Deploy, then open the `*.netlify.app` address and test AAPL, KO, CAT and MSFT.
 6. **Domain management → Add a domain** → follow the instructions to connect your domain from step 3. HTTPS is set up automatically.
 
