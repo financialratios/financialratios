@@ -569,3 +569,4 @@ textarea:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 4p
   .paywall { padding: 20px 14px; }
   .dl-quota { text-align: left; }
 }
+.implied { margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: var(--blue-soft); border-left: 4px solid var(--blue); line-height: 1.55; }

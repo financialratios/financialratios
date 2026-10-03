@@ -165,3 +165,18 @@ test('WACC from CAPM and cost of debt; longer growth period raises value', async
   const base = { revenue: 100, growth: 0.08, fcfMargin: 0.2, discount: 0.085, terminalGrowth: 0.025, shares: 1 };
   assert.ok(dcf({ ...base, highYears: 10, years: 15 }).perShare > dcf({ ...base, highYears: 5, years: 10 }).perShare);
 });
+
+test('DCF: mature margin, mid-year convention and reverse DCF', async () => {
+  const { dcf, impliedGrowth } = await import('../public/js/lib/finance.js');
+  const base = { revenue: 100, growth: 0.1, fcfMargin: 0.1, discount: 0.09, terminalGrowth: 0.025, highYears: 10, years: 15, netDebt: 0, shares: 1 };
+  const plain = dcf(base);
+  const mature = dcf({ ...base, matureMargin: 0.15 });
+  const mid = dcf({ ...base, midYear: true });
+  assert.ok(mature.equityValue > plain.equityValue, 'a higher mature margin raises the value');
+  assert.equal(mature.rows[9].margin, 0.1); // still the growth-period margin
+  assert.ok(Math.abs(mature.rows[14].margin - 0.15) < 1e-12); // fully mature at the end of the fade
+  assert.ok(Math.abs(mid.equityValue / plain.equityValue - Math.sqrt(1.09)) < 1e-9, 'mid-year shifts everything by half a year');
+  const g = impliedGrowth(base, plain.equityValue);
+  assert.ok(Math.abs(g - 0.1) < 1e-6, 'reverse DCF finds the growth back');
+  assert.equal(impliedGrowth(base, null), null);
+});
