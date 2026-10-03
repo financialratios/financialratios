@@ -6,6 +6,7 @@ import {
 } from './lib/finance.js';
 import { barChart, lineChart, palette } from './charts.js';
 import { escapeHtml } from './lib/format.js';
+import { track } from './track.js';
 
 // ---------- currency preference (remembered per visitor) ----------
 const CURRENCIES = { USD: '$', EUR: '€', GBP: '£', RON: 'lei ', CHF: 'CHF ', CAD: 'C$', AUD: 'A$', INR: '₹', JPY: '¥' };
@@ -382,7 +383,9 @@ function renderCalculator(root, key) {
         <tbody>${out.table.rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
     } else tableBox.classList.add('hidden');
   };
+  let used = false;
   form.addEventListener('input', (e) => {
+    if (!used) { used = true; track('use_calculator', { calculator: key }); }
     if (e.target.id === 'in-currency') {
       cur = e.target.value;
       try { localStorage.setItem('fr-currency', cur); } catch { /* ignore */ }
