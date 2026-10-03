@@ -1,13 +1,14 @@
 // Section 3: type a ticker, get an objective analysis.
 // Everything shown is calculated from the company's own reported history. No ratings, no verdicts.
 import {
-  yearlyRatios, historySummary, currentValuation, historicalMultiples, dcf, average, isNum, growthSeries, splitAdjustedIncome, dividendHistory, cagr, investmentSince,
+  yearlyRatios, historySummary, currentValuation, historicalMultiples, dcf, average, isNum, growthSeries, splitAdjustedIncome, dividendHistory, cagr, investmentSince, estimateWacc,
 } from './lib/finance.js';
 import { compact, money, pct, signedPct, times, plain, millions, words, escapeHtml, DASH } from './lib/format.js';
 import { barChart, lineChart, donutChart, palette } from './charts.js';
 import { INCOME_ROWS, BALANCE_ROWS, CASHFLOW_ROWS, RATIO_ROWS } from './rows.js';
 import { downloadExcel, downloadPdf } from './export.js';
 import { profileFor, SUGGESTIONS } from './profiles.js';
+import { requestDownload, renderQuota, refreshLicense } from './access.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -158,6 +159,7 @@ function render(c) {
           <button data-dl="xlsx">📗 Excel file (.xlsx)<small>Income, balance sheet, cash flow + ratios · ${c.income.length} years</small></button>
           <button data-dl="pdf">📕 PDF file<small>Printable: the 3 statements · ${c.income.length} years</small></button>
         </div>
+        <div class="dl-quota small" id="dl-quota" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -265,7 +267,7 @@ function render(c) {
   <section class="az-section" id="dcf">
     <h2>Discounted cash flow (DCF) model</h2>
     <p class="muted">A DCF estimates what the business could be worth from the cash it may produce. The starting assumptions come from the company's <b>own history</b>;
-      move the sliders to test your own. Built like the <a href="/learn/dcf.html">DCF lesson</a>, simplified, with one refinement: growth fades in a straight line from year 6 to year 10 towards the long-term rate.</p>
+      move the sliders to test your own. Built like the <a href="/learn/dcf.html">DCF lesson</a>: the discount rate is the company's own WACC (cost of equity from its beta, cost of debt from its interest bill), revenue grows for the growth period and then slows over 5 years to the long-term rate.</p>
     <div class="dcf-grid">
       <div class="col-stack"><form class="card calc-form" id="dcf-form" onsubmit="return false"></form><div class="card" id="dcf-sens"></div></div>
       <div id="dcf-out"></div>
@@ -345,13 +347,22 @@ function wireDownload(c) {
   const toggle = (open) => { menu.classList.toggle('hidden', !open); btn.setAttribute('aria-expanded', String(open)); };
   btn.addEventListener('click', (e) => { e.stopPropagation(); toggle(menu.classList.contains('hidden')); });
   document.addEventListener('click', (e) => { if (!e.target.closest('.dl')) toggle(false); });
+  const quota = $('#dl-quota');
+  renderQuota(quota);
+  refreshLicense().then(() => renderQuota(quota));
+  if (!wireDownload.listening) {
+    wireDownload.listening = true;
+    document.addEventListener('fr-access-changed', () => renderQuota($('#dl-quota')));
+  }
   $$('#dl-menu button').forEach((b) => b.addEventListener('click', async () => {
+    toggle(false);
+    if (!(await requestDownload())) { renderQuota(quota); return; }
     const label = btn.textContent;
     btn.textContent = '⏳ Preparing file…';
-    toggle(false);
     try { await (b.dataset.dl === 'xlsx' ? downloadExcel(c) : downloadPdf(c)); }
     catch (err) { alert(`Sorry, the download failed: ${err.message}`); }
     btn.textContent = label;
+    renderQuota(quota);
   }));
 }
 
@@ -670,19 +681,22 @@ function renderDcf(c, hist, val) {
   const lastInc = [...c.income].reverse().find((r) => isNum(r.revenue) && r.revenue > 0) || c.income[c.income.length - 1];
   const g5 = hist.revenueCagr5 ?? hist.revenueCagr;
   const m5 = hist.avgFcfMargin5 ?? hist.avgFcfMargin;
+  const w0 = estimateWacc(c, val);
   const defaults = {
     growth: isNum(g5) ? g5 * 100 : 2.5,
+    years: 10,
     margin: isNum(m5) ? m5 * 100 : 5,
-    discount: 9,
+    discount: Math.round(w0.wacc * 20) / 20,
     terminal: 2.5,
   };
   const round1 = (v) => Math.round(v * 10) / 10;
   const sliders = [
-    { id: 'growth', label: 'Revenue growth, years 1–5', min: -20, max: 60, step: 0.1, why: isNum(g5) ? `Default: the company's average growth over the <b>last ${hist.span5} years</b>: revenue went from ${compact(hist.cagr5From.value, cur)} (FY${hist.cagr5From.year}) to ${compact(hist.cagr5To.value, cur)} (FY${hist.cagr5To.year}) = <b>${pct(g5)} a year</b>.${isNum(hist.revenueCagr) && hist.span > hist.span5 ? ` Over the whole history shown (FY${hist.cagr5To.year - hist.span}–FY${hist.cagr5To.year}) it was ${pct(hist.revenueCagr)} a year.` : ''}`
+    { id: 'growth', label: 'Revenue growth during the growth period', min: -20, max: 60, step: 0.1, why: isNum(g5) ? `Default: the company's average growth over the <b>last ${hist.span5} years</b>: revenue went from ${compact(hist.cagr5From.value, cur)} (FY${hist.cagr5From.year}) to ${compact(hist.cagr5To.value, cur)} (FY${hist.cagr5To.year}) = <b>${pct(g5)} a year</b>.${isNum(hist.revenueCagr) && hist.span > hist.span5 ? ` Over the whole history shown (FY${hist.cagr5To.year - hist.span}–FY${hist.cagr5To.year}) it was ${pct(hist.revenueCagr)} a year.` : ''}`
       : 'Revenue history is incomplete, so the default is 2.5% (long-run economic growth). Set your own estimate.' },
     { id: 'margin', label: 'Free cash flow margin', min: -20, max: 60, step: 0.1, why: `Default: its average free cash flow ÷ revenue over the last 5 years (${pct(m5)}).` },
-    { id: 'discount', label: 'Discount rate (return you require)', min: 4, max: 20, step: 0.25, why: 'Default 9%: close to the long-run historical return of broad stock markets. Riskier company → higher rate.' },
-    { id: 'terminal', label: 'Long-term growth after year 10', min: 0, max: 5, step: 0.25, why: 'Default 2.5%: roughly long-run economic growth. Must stay below the discount rate.' },
+    { id: 'years', label: 'Growth period', unit: 'years', min: 1, max: 15, step: 1, why: 'Default 10 years: how long the company keeps growing at the rate above. After it, growth slows step by step over 5 years to the long-term rate.' },
+    { id: 'discount', label: 'Discount rate (WACC)', min: 3, max: 16, step: 0.05, why: '<span id="wacc-why"></span>' },
+    { id: 'terminal', label: 'Long-term growth, forever after', min: 0, max: 4, step: 0.25, why: 'Default 2.5%: roughly long-run economic growth (inflation + real growth). Must stay below the WACC.' },
   ];
   const form = $('#dcf-form');
   form.innerHTML = sliders.map((s) => `<div class="slider-row"><div class="top"><label for="d-${s.id}" style="margin:0">${s.label}</label><output id="o-${s.id}"></output></div>
@@ -690,13 +704,35 @@ function renderDcf(c, hist, val) {
     <span class="hint">${s.why}</span></div>`).join('') +
     `${Math.abs(defaults.growth) > 25 ? '<div class="notice small" style="margin:0">The historical growth rate is unusually high. Very few companies sustain growth above 20–25% a year for long periods; try lower values to see how sensitive the result is.</div>' : ''}
     <button type="button" class="btn btn-ghost btn-sm" id="dcf-reset">↺ Back to historical defaults</button>`;
+  // WACC built from its parts, each editable (same formulas as the DCF lesson).
+  form.querySelector('#wacc-why').outerHTML = `<details class="wacc-box" open><summary>How this WACC is calculated (edit the parts)</summary>
+    <div class="wacc-inputs">
+      <label>Risk-free rate %<input type="number" id="w-rf" step="0.1" value="${w0.rf}"></label>
+      <label>Beta${w0.betaFromData ? '' : ' (no data: 1.0)'}<input type="number" id="w-beta" step="0.05" value="${Math.round(w0.beta * 100) / 100}"></label>
+      <label>Market risk premium %<input type="number" id="w-mrp" step="0.1" value="${w0.mrp}"></label>
+    </div><div id="wacc-calc" class="small"></div></details>`;
+  const waccParts = () => estimateWacc(c, val, { rf: Number($('#w-rf').value), beta: Number($('#w-beta').value), mrp: Number($('#w-mrp').value) });
+  const showWacc = (w) => {
+    $('#wacc-calc').innerHTML = `Cost of equity = ${w.rf.toFixed(1)}% + ${w.beta.toFixed(2)} × ${w.mrp.toFixed(1)}% = <b>${w.ke.toFixed(2)}%</b><br>
+      Cost of debt after tax = ${w.kdPre.toFixed(1)}% × (1 − ${w.tax.toFixed(0)}%) = <b>${w.kd.toFixed(2)}%</b><br>
+      WACC = ${(w.wE * 100).toFixed(0)}% × ${w.ke.toFixed(2)}% + ${(w.wD * 100).toFixed(0)}% × ${w.kd.toFixed(2)}% = <b>${w.wacc.toFixed(2)}%</b>
+      <span class="muted">(${(w.wE * 100).toFixed(0)}% of the money is the shares' market value, ${(w.wD * 100).toFixed(0)}% is debt)</span>`;
+  };
+  showWacc(w0);
+  ['#w-rf', '#w-beta', '#w-mrp'].forEach((id) => form.querySelector(id).addEventListener('input', (e) => {
+    e.stopPropagation();
+    const w = waccParts();
+    showWacc(w);
+    $('#d-discount').value = Math.min(16, Math.max(3, Math.round(w.wacc * 20) / 20));
+    update();
+  }));
   const read = () => Object.fromEntries(sliders.map((s) => [s.id, Number($(`#d-${s.id}`).value)]));
   const shares = val.shares;
   const update = () => {
     const v = read();
-    sliders.forEach((s) => { $(`#o-${s.id}`).textContent = `${v[s.id].toFixed(s.step < 0.1 || s.step === 0.25 ? 2 : 1)}%`; });
+    sliders.forEach((s) => { $(`#o-${s.id}`).textContent = s.unit ? `${v[s.id]} ${s.unit}` : `${v[s.id].toFixed(s.step < 0.1 || s.step === 0.25 ? 2 : 1)}%`; });
     const run = (g, d) => {
-      const r = dcf({ revenue: lastInc.revenue, growth: g / 100, fcfMargin: v.margin / 100, discount: d / 100, terminalGrowth: v.terminal / 100, netDebt: val.netDebt, shares });
+      const r = dcf({ revenue: lastInc.revenue, growth: g / 100, fcfMargin: v.margin / 100, discount: d / 100, terminalGrowth: v.terminal / 100, netDebt: val.netDebt, shares, highYears: v.years, years: v.years + 5 });
       // Per-share value in the currency (and share units) the price is quoted in.
       if (r && !r.error) r.perShare = isNum(val.fx) && isNum(val.priceShares) && val.priceShares > 0 ? (r.equityValue * val.fx) / val.priceShares : pcur === cur ? r.perShare : null;
       return r;
@@ -718,14 +754,14 @@ function renderDcf(c, hist, val) {
       <div class="stats">
         ${stat('Enterprise value', compact(r.enterpriseValue, cur))}${stat(val.netDebt >= 0 ? '− Net debt' : '+ Net cash', compact(Math.abs(val.netDebt), cur))}
         ${stat('Equity value', compact(r.equityValue, cur))}${stat('Shares', isNum(shares) ? `${(shares / 1e6).toLocaleString('en-US', { maximumFractionDigits: 0 })}M` : DASH)}
-        ${stat('Share of value after year 10', pct(r.terminalShare, 0))}
+        ${stat('Share of value from after the forecast', pct(r.terminalShare, 0))}
       </div>
       <div class="card"><h3 style="margin-top:0">Revenue and free cash flow: history and projection</h3><div class="chart-box tall"><canvas id="c-dcf"></canvas></div></div>
 
       <details class="card" style="margin-top:16px"><summary style="cursor:pointer;font-weight:800">See the year-by-year projection</summary>
         <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Year</th><th>Growth</th><th>Revenue</th><th>Free cash flow</th><th>Value today</th></tr></thead><tbody>
         ${r.rows.map((x) => `<tr><td>${lastInc.fiscalYear + x.year}</td><td>${pct(x.growth)}</td><td>${compact(x.revenue, cur)}</td><td>${compact(x.fcf, cur)}</td><td>${compact(x.pv, cur)}</td></tr>`).join('')}
-        <tr class="total"><td>After ${lastInc.fiscalYear + 10}</td><td>${pct(v.terminal / 100)}</td><td></td><td>Terminal value ${compact(r.terminalValue, cur)}</td><td>${compact(r.pvTerminal, cur)}</td></tr>
+        <tr class="total"><td>After ${lastInc.fiscalYear + r.rows.length}</td><td>${pct(v.terminal / 100)}</td><td></td><td>Terminal value ${compact(r.terminalValue, cur)}</td><td>${compact(r.pvTerminal, cur)}</td></tr>
         </tbody></table></div></details>
       ${arrow('The model is only as good as its assumptions. Using the company\'s history as the starting point is a neutral choice, not a forecast: the past does not guarantee the future.')}`;
     $('#dcf-sens').innerHTML = `<h3 style="margin-top:0">🎯 Sensitivity: value per share</h3><p class="small muted" style="margin-top:0">How the result changes with the discount rate (rows) and growth (columns).</p>
@@ -749,6 +785,8 @@ function renderDcf(c, hist, val) {
   form.addEventListener('input', update);
   $('#dcf-reset').addEventListener('click', () => {
     sliders.forEach((s) => { $(`#d-${s.id}`).value = Math.min(s.max, Math.max(s.min, round1(defaults[s.id]))); });
+    $('#w-rf').value = w0.rf; $('#w-beta').value = Math.round(w0.beta * 100) / 100; $('#w-mrp').value = w0.mrp;
+    showWacc(w0);
     update();
   });
   update();

@@ -150,3 +150,18 @@ test('portfolio: average cost, partial sale, realized gain, currency conversion'
   const missing = portfolioSummary([{ symbol: 'ZZZ', type: 'buy', shares: 1, price: 1 }], {}, {});
   assert.deepEqual(missing.totals.missing, ['ZZZ']);
 });
+
+test('WACC from CAPM and cost of debt; longer growth period raises value', async () => {
+  const { estimateWacc, dcf } = await import('../public/js/lib/finance.js');
+  const company = { reportingCurrency: 'USD', profile: { beta: 1.2 },
+    income: [{ interestExpense: 40, incomeTax: 20, pretaxIncome: 100 }], balance: [{ totalDebt: 1000 }] };
+  const w = estimateWacc(company, { marketCap: 9000 });
+  near(w.ke, 4.2 + 1.2 * 4.5, 1e-9);
+  near(w.kdPre, 4, 1e-9);
+  near(w.kd, 4 * 0.8, 1e-9);
+  near(w.wacc, 0.9 * w.ke + 0.1 * w.kd, 1e-9);
+  const low = estimateWacc({ ...company, profile: { beta: 0.6 } }, { marketCap: 9000 });
+  assert.ok(low.wacc < w.wacc, 'a calmer share has a lower WACC');
+  const base = { revenue: 100, growth: 0.08, fcfMargin: 0.2, discount: 0.085, terminalGrowth: 0.025, shares: 1 };
+  assert.ok(dcf({ ...base, highYears: 10, years: 15 }).perShare > dcf({ ...base, highYears: 5, years: 10 }).perShare);
+});
