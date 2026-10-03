@@ -10,6 +10,7 @@ import { fmpCompany, fmpPrices, fmpSearch } from './providers/fmp.mjs';
 import { secCompany, secSearch } from './providers/sec.mjs';
 import { yahooChart, yahooCompany, yahooFx, yahooProfile, yahooSearch } from './providers/yahoo.mjs';
 import { demoCompany, demoPrices } from './demo.mjs';
+import { SITE } from '../public/js/config.js';
 import { handleReviews } from './reviews.mjs';
 import { handlePayments } from './payments.mjs';
 
@@ -29,7 +30,8 @@ async function cached(key, fn) {
 function config(env) {
   return {
     fmpKey: env.FMP_API_KEY || '',
-    secUA: env.SEC_USER_AGENT || 'FinancialRat (set SEC_USER_AGENT to "Your Name your@email.com")',
+    // The SEC asks for a name and contact email; the site's contact email is used when no variable is set.
+    secUA: env.SEC_USER_AGENT || `Financial Rat ${SITE.contactEmail}`,
   };
 }
 
@@ -156,8 +158,8 @@ export async function handleApi(url, env = process.env, req = {}) {
   const cfg = config(env);
   const route = url.pathname.replace(/\/+$/, '').split('/').pop();
   try {
-    if (['license', 'download', 'checkout', 'claim', 'stripe-webhook', 'plans'].includes(route)) {
-      const [status, body] = await handlePayments(route, { method: req.method || 'GET', url, body: req.body, headers: req.headers || {}, env });
+    if (['license', 'download', 'gumroad-ping', 'plans'].includes(route)) {
+      const [status, body] = await handlePayments(route, { method: req.method || 'GET', url, body: req.body, env });
       return json(status, body);
     }
     if (route === 'reviews') {

@@ -28,7 +28,7 @@ Netlify's free plan allows commercial sites (Vercel's free plan does not, so use
 3. Leave the build settings as they are (they are read from `netlify.toml`).
 4. **Site configuration → Environment variables**, add:
    * `FMP_API_KEY` = your key from step 2
-   * `SEC_USER_AGENT` = `Financial Rat your@email.com`
+   * Optional: `SEC_USER_AGENT` (Key) with the value `Financial Rat` + your email. Without it, the contact email from `public/js/config.js` is used.
 5. Deploy, then open the `*.netlify.app` address and test AAPL, KO, CAT and MSFT.
 6. **Domain management → Add a domain** → follow the instructions to connect your domain from step 3. HTTPS is set up automatically.
 
@@ -50,30 +50,27 @@ AdSense approves sites that have original, useful content. The lessons and calcu
 4. **Required in the EU:** in AdSense open **Privacy & messaging → European regulations** and publish Google's consent message (cookie banner). No code is needed.
 5. After approval, either turn on **Auto ads**, or create 3 display ad units and paste their slot IDs into `adSlots` in `public/js/config.js` (`top`, `middle`, `bottom`).
 
-## Step 6b: Switch on paid downloads (Stripe + Resend, about 1 hour)
-Everyone gets 3 free downloads. After that the site offers 5 downloads for €0.99, Premium monthly (€4.99) or Premium yearly (€49.99).
-Until the steps below are done, the payment buttons politely say "Payments are not switched on yet".
-1. **Business first.** Stripe pays out to a business or a sole trader. In Romania that means a PFA or an SRL. Ask an accountant about VAT (EU OSS) for digital sales.
-2. **Stripe account** at https://dashboard.stripe.com. Complete the activation (identity, bank account).
-3. **Products → Add product**, create three prices in EUR:
-   * "5 downloads", **one-off** price €0.99
-   * "Premium monthly", **recurring monthly** €4.99
-   * "Premium yearly", **recurring yearly** €49.99
-   Copy each price ID (it starts with `price_`).
-4. **Developers → Webhooks → Add endpoint**: URL `https://YOUR-DOMAIN/api/stripe-webhook`, events `checkout.session.completed`,
-   `customer.subscription.updated` and `customer.subscription.deleted`. Copy the **signing secret** (`whsec_…`).
-5. **Settings → Billing → Customer portal**: turn it on, so subscribers can cancel themselves from their receipt email.
-6. **Resend** (thank-you emails) at https://resend.com: add your domain, add the DNS records it shows you at your registrar, wait until it says *Verified*,
-   then create an API key.
-7. On Netlify, **Environment variables**, add:
-   * `STRIPE_SECRET_KEY` = `sk_live_…` (use `sk_test_…` first to try it with the test card 4242 4242 4242 4242)
-   * `STRIPE_WEBHOOK_SECRET` = `whsec_…`
-   * `STRIPE_PRICE_PACK5`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` = the three `price_…` IDs
-   * `RESEND_API_KEY` = `re_…`
-   * `EMAIL_FROM` = `Financial Rat <hello@YOUR-DOMAIN>` (and optionally `EMAIL_REPLY_TO` = your own inbox, so replies to the thank-you email reach you)
-   * `SITE_URL` = `https://YOUR-DOMAIN`
-   Then **Deploys → Trigger deploy**.
-8. Test: in test mode, buy each option once. You should land on `/premium.html` with your access code and receive the "Dear …" thank-you email.
+## Step 6b: Switch on paid downloads (Gumroad, about 30 minutes)
+While no Gumroad product is filled in, downloads are **free and unlimited** (no counter, no paywall).
+Once you fill them in, everyone gets 3 free downloads, then can buy 5 downloads (€0.99), Premium monthly (€4.99) or Premium yearly (€49.99).
+Gumroad is the seller of record: it takes the payment, handles EU VAT and sends the receipt. Private persons can sell; you still declare the income (ask an accountant once).
+Gumroad's fee is about 10% + $0.50 per sale, so on €0.99 roughly half goes to fees; consider €1.99 for the pack.
+1. Create an account at https://gumroad.com and add your payout details (bank account or PayPal).
+2. Create **3 products** (Products → New product):
+   * "5 downloads": type **Digital product**, price €0.99.
+   * "Premium monthly": type **Membership**, €4.99, billed **monthly** only.
+   * "Premium yearly": type **Membership**, €49.99, billed **yearly** only.
+   For each: set the currency to **EUR**, and in **Content → License key** switch on **"Generate a unique license key per sale"**.
+   Optional: add a checkout field called **Name**, so the thank-you email can start with the buyer's name.
+3. For each product copy its **link** (e.g. `https://yourname.gumroad.com/l/abcde`) and its **product ID** (shown in the License key section).
+4. Paste them into `gumroad` in `public/js/config.js` (or send them to Claude to do it). Commit; Netlify redeploys.
+5. Test: buy the pack once yourself (you can refund yourself in Gumroad), paste the license key into the paywall, and download.
+
+**Optional: personal thank-you email** ("Dear Ana, thank you for your trust… please leave a review")
+1. https://resend.com: add your domain, add the DNS records it shows at Namecheap, wait for *Verified*, create an API key.
+2. Netlify → Environment variables: `RESEND_API_KEY` = `re_…`, `EMAIL_FROM` = `Financial Rat <hello@financialrat.com>`, optionally `EMAIL_REPLY_TO` = your inbox. Trigger a deploy.
+3. Gumroad → Settings → Advanced → **Ping**: `https://financialrat.com/api/gumroad-ping`.
+Without these, buyers still get Gumroad's own receipt with their license key.
 
 ## Step 7: Help people find the site (ongoing)
 1. Add the site to **Google Search Console** (https://search.google.com/search-console) and submit `https://yourdomain/sitemap.xml`.
@@ -92,7 +89,7 @@ Until the steps below are done, the payment buttons politely say "Payments are n
 | Test live company data | The build environment blocks financial data websites, so live data was tested with sample responses in the providers' documented formats | Step 1 (local) or Step 4 (online): try several tickers and report anything odd |
 | Data provider account and key | Needs your identity and payment | Step 2 |
 | Domain, hosting account | Needs your identity and payment | Steps 3–4 |
-| Stripe and Resend accounts | Need your identity, business and bank account | Step 6b |
+| Gumroad and Resend accounts | Need your identity and bank account | Step 6b |
 | AdSense approval | Only Google approves, and only for the site owner | Step 6 |
 | Legal review and business registration | Needs a professional and your details | Step 5 |
 
