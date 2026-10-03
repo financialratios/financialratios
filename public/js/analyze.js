@@ -235,6 +235,7 @@ function render(c) {
     <div class="split st-split"><div class="card"><div class="chart-box"><canvas id="c-statement"></canvas></div></div>
     <div class="card"><h3 style="margin-top:0">📌 What the numbers say</h3><div id="st-explain"></div></div></div>
     <div class="table-wrap" id="st-table" style="margin-top:12px"></div>
+    <div id="st-more"></div>
   </section>
 
   <section class="az-section" id="ratios">
@@ -247,7 +248,8 @@ function render(c) {
       <div class="card"><h3 style="margin-top:0">Liquidity (current ratio)</h3><div class="chart-box short"><canvas id="c-liquidity"></canvas></div></div>
     </div>
     <div id="ratio-explain" style="margin-top:16px">${ratioFacts(ratios)}</div>
-    <div class="table-wrap ratio-table" style="margin-top:16px">${ratioTable(ratios)}</div>
+    <div class="table-wrap ratio-table" id="ratio-table" style="margin-top:16px">${ratioTable(ratios.slice(-TABLE_YEARS))}</div>
+    <div id="ratio-more">${moreInDownload(ratios.length)}</div>
     <p class="small muted">— means the company did not report the numbers needed, or the ratio is not meaningful that year (for example a P/E or return when profit or equity is negative). A company with no borrowings shows debt ratios of 0.</p>
   </section>
 
@@ -305,6 +307,8 @@ function render(c) {
     renderStatement(b.dataset.st);
   }));
   renderRatioCharts(c, ratios);
+  protect($('#ratio-table'));
+  wireMoreDownload($('#ratio-more'));
   // Tables keep oldest → newest order but open scrolled to the latest years on small screens.
   $$('.ratio-table').forEach((el) => { el.scrollLeft = el.scrollWidth; });
   renderDcf(c, hist, val);
@@ -435,17 +439,43 @@ function renderSegments(c) {
 }
 
 // ---------- Statements ----------
+// On screen the tables show the latest years only; the full history is in the downloads.
+const TABLE_YEARS = 5;
+function moreInDownload(total) {
+  if (total <= TABLE_YEARS) return '';
+  return `<div class="more-dl"><span>🔒 The table shows the last ${TABLE_YEARS} years. <b>All ${total} years</b> are in the Excel and PDF files.</span>
+    <button type="button" class="btn btn-accent btn-sm" data-open-dl>⬇ Download all ${total} years</button></div>`;
+}
+// Tables are for reading, not copying: no selecting, copying or right-click menu on them.
+function protect(el) {
+  if (!el || el.dataset.protected) return;
+  el.dataset.protected = '1';
+  el.classList.add('no-copy');
+  ['copy', 'cut', 'contextmenu', 'selectstart', 'dragstart'].forEach((ev) => el.addEventListener(ev, (e) => e.preventDefault()));
+}
+function wireMoreDownload(root) {
+  root.querySelectorAll('[data-open-dl]').forEach((b) => b.addEventListener('click', () => {
+    const btn = $('#dl-btn');
+    btn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => btn?.click(), 350);
+  }));
+}
+
 function renderStatement(kind) {
   const c = state.company, cur = state.cur, pal = palette();
   const rows = { income: INCOME_ROWS, balance: BALANCE_ROWS, cashflow: CASHFLOW_ROWS }[kind];
   const data = c[kind];
+  const shown = data.slice(-TABLE_YEARS);
   const years = data.map((r) => `FY${r.fiscalYear}`);
   const perShare = new Set(['eps', 'epsDiluted']);
   const totals = new Set(['grossProfit', 'operatingIncome', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity', 'operatingCashFlow', 'freeCashFlow']);
   const cell = (field, v) => (perShare.has(field) ? (isNum(v) ? plain(v) : DASH) : millions(v));
-  $('#st-table').innerHTML = `<table class="rt compact"><thead><tr><th>${kind === 'income' ? 'Income statement' : kind === 'balance' ? 'Balance sheet' : 'Cash flow statement'}</th>${years.map((y) => `<th>${y}</th>`).join('')}</tr></thead>
-    <tbody>${rows.filter(([f]) => data.some((r) => isNum(r[f]))).map(([f, label, ex]) => `<tr class="${totals.has(f) ? 'total' : ''}"><td title="${ex}"><span class="rname">${label} <span class="info" aria-label="${ex}">ⓘ</span></span></td>${data.map((r) => `<td class="${isNum(r[f]) && r[f] < 0 ? 'neg' : ''}">${cell(f, r[f])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  $('#st-table').innerHTML = `<table class="rt compact"><thead><tr><th>${kind === 'income' ? 'Income statement' : kind === 'balance' ? 'Balance sheet' : 'Cash flow statement'}</th>${shown.map((r) => `<th>FY${r.fiscalYear}</th>`).join('')}</tr></thead>
+    <tbody>${rows.filter(([f]) => shown.some((r) => isNum(r[f]))).map(([f, label, ex]) => `<tr class="${totals.has(f) ? 'total' : ''}"><td title="${ex}"><span class="rname">${label} <span class="info" aria-label="${ex}">ⓘ</span></span></td>${shown.map((r) => `<td class="${isNum(r[f]) && r[f] < 0 ? 'neg' : ''}">${cell(f, r[f])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   $('#st-table').scrollLeft = 0;
+  protect($('#st-table'));
+  $('#st-more').innerHTML = moreInDownload(data.length);
+  wireMoreDownload($('#st-more'));
 
   const m = (k) => data.map((r) => (isNum(r[k]) ? r[k] : null));
   const fmt = (v) => compact(v, cur);
@@ -504,10 +534,10 @@ const safeMargin = (a, b) => (isNum(a) && isNum(b) && b > 0 ? a / b : null);
 // ---------- Ratios ----------
 function fmtRatio(v, f) { return f === 'pct' ? pct(v) : f === 'x1' ? times(v) : times(v, 2); }
 function ratioTable(ratios) {
-  const rows = ratios; // oldest to newest
+  const rows = ratios; // oldest to newest (the latest years only, see TABLE_YEARS)
   const cols = rows.length + 2;
   const cell = (v, f) => (isNum(v) ? fmtRatio(v, f) : '<span class="na" title="Not reported, or not meaningful (e.g. negative profit or equity)">—</span>');
-  return `<table class="rt compact"><thead><tr><th>Ratio</th>${rows.map((y) => `<th>FY${y.fiscalYear}</th>`).join('')}<th>Average</th></tr></thead><tbody>
+  return `<table class="rt compact"><thead><tr><th>Ratio</th>${rows.map((y) => `<th>FY${y.fiscalYear}</th>`).join('')}<th>${rows.length}-yr average</th></tr></thead><tbody>
     ${RATIO_ROWS.map((r) => (r.group ? `<tr class="grp"><td colspan="${cols}"><span class="grp-label">${r.group}</span></td></tr>`
     : `<tr><td title="${r.explain}"><span class="rname">${r.label} <span class="info" aria-label="${r.explain}">ⓘ</span></span></td>${rows.map((y) => `<td class="${isNum(y[r.key]) && y[r.key] < 0 ? 'neg' : ''}">${cell(y[r.key], r.fmt)}</td>`).join('')}<td><b>${cell(average(ratios.map((y) => y[r.key])), r.fmt)}</b></td></tr>`)).join('')}
   </tbody></table>`;
