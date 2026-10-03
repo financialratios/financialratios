@@ -28,6 +28,7 @@ export const BALANCE_ROWS = [
   ['totalCurrentAssets', 'Total current assets', 'Assets that turn into cash within a year.'],
   ['propertyPlantEquipment', 'Property, plant & equipment', 'Buildings, machines, equipment (after depreciation).'],
   ['goodwillIntangibles', 'Goodwill & intangibles', 'Brands, patents and the premium paid for acquisitions.'],
+  ['longTermInvestments', 'Long-term investments', 'Bonds, shares and stakes in other companies held for more than a year.'],
   ['totalAssets', 'Total assets', 'Everything the company owns.'],
   ['accountsPayable', 'Accounts payable', 'Bills owed to suppliers.'],
   ['shortTermDebt', 'Short-term debt', 'Borrowings due within a year.'],

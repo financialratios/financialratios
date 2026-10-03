@@ -156,7 +156,7 @@ const TS = {
   },
   balance: {
     cash: 'CashAndCashEquivalents', shortTermInvestments: 'OtherShortTermInvestments', receivables: 'AccountsReceivable', inventory: 'Inventory',
-    totalCurrentAssets: 'CurrentAssets', propertyPlantEquipment: 'NetPPE', goodwillIntangibles: 'GoodwillAndOtherIntangibleAssets', totalAssets: 'TotalAssets',
+    totalCurrentAssets: 'CurrentAssets', propertyPlantEquipment: 'NetPPE', goodwillIntangibles: 'GoodwillAndOtherIntangibleAssets', longTermInvestments: 'InvestmentsAndAdvances', totalAssets: 'TotalAssets',
     accountsPayable: 'AccountsPayable', shortTermDebt: 'CurrentDebt', totalCurrentLiabilities: 'CurrentLiabilities', longTermDebt: 'LongTermDebt',
     totalLiabilities: 'TotalLiabilitiesNetMinorityInterest', totalEquity: 'StockholdersEquity', totalDebt: 'TotalDebt',
   },

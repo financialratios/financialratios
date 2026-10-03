@@ -1,7 +1,7 @@
 // Section 3: type a ticker, get an objective analysis.
 // Everything shown is calculated from the company's own reported history. No ratings, no verdicts.
 import {
-  yearlyRatios, historySummary, currentValuation, historicalMultiples, dcf, average, isNum, growthSeries, splitAdjustedIncome, dividendHistory, cagr, investmentSince, estimateWacc,
+  yearlyRatios, historySummary, currentValuation, historicalMultiples, dcf, average, isNum, growthSeries, splitAdjustedIncome, dividendHistory, cagr, investmentSince, estimateWacc, impliedGrowth,
 } from './lib/finance.js';
 import { compact, money, pct, signedPct, times, plain, millions, words, escapeHtml, DASH } from './lib/format.js';
 import { barChart, lineChart, donutChart, palette } from './charts.js';
@@ -235,6 +235,7 @@ function render(c) {
     <div class="split st-split"><div class="card"><div class="chart-box"><canvas id="c-statement"></canvas></div></div>
     <div class="card"><h3 style="margin-top:0">📌 What the numbers say</h3><div id="st-explain"></div></div></div>
     <div class="table-wrap" id="st-table" style="margin-top:12px"></div>
+    <div id="st-more"></div>
   </section>
 
   <section class="az-section" id="ratios">
@@ -247,7 +248,8 @@ function render(c) {
       <div class="card"><h3 style="margin-top:0">Liquidity (current ratio)</h3><div class="chart-box short"><canvas id="c-liquidity"></canvas></div></div>
     </div>
     <div id="ratio-explain" style="margin-top:16px">${ratioFacts(ratios)}</div>
-    <div class="table-wrap ratio-table" style="margin-top:16px">${ratioTable(ratios)}</div>
+    <div class="table-wrap ratio-table" id="ratio-table" style="margin-top:16px">${ratioTable(ratios.slice(-TABLE_YEARS))}</div>
+    <div id="ratio-more">${moreInDownload(ratios.length)}</div>
     <p class="small muted">— means the company did not report the numbers needed, or the ratio is not meaningful that year (for example a P/E or return when profit or equity is negative). A company with no borrowings shows debt ratios of 0.</p>
   </section>
 
@@ -267,7 +269,7 @@ function render(c) {
   <section class="az-section" id="dcf">
     <h2>Discounted cash flow (DCF) model</h2>
     <p class="muted">A DCF estimates what the business could be worth from the cash it may produce. The starting assumptions come from the company's <b>own history</b>;
-      move the sliders to test your own. Built like the <a href="/learn/dcf.html">DCF lesson</a>: the discount rate is the company's own WACC (cost of equity from its beta, cost of debt from its interest bill), revenue grows for the growth period and then slows over 5 years to the long-term rate.</p>
+      move the sliders to test your own. Built like the <a href="/learn/dcf.html">DCF lesson</a>: the discount rate is the company's own WACC (cost of equity from its beta, cost of debt from its interest bill), revenue grows for the growth period and then slows over 5 years to the long-term rate, while the cash flow margin rises to its mature level as spending on growth winds down. Cash is counted as it arrives through each year (mid-year), and long-term investments are added to the value.</p>
     <div class="dcf-grid">
       <div class="col-stack"><form class="card calc-form" id="dcf-form" onsubmit="return false"></form><div class="card" id="dcf-sens"></div></div>
       <div id="dcf-out"></div>
@@ -305,6 +307,8 @@ function render(c) {
     renderStatement(b.dataset.st);
   }));
   renderRatioCharts(c, ratios);
+  protect($('#ratio-table'));
+  wireMoreDownload($('#ratio-more'));
   // Tables keep oldest → newest order but open scrolled to the latest years on small screens.
   $$('.ratio-table').forEach((el) => { el.scrollLeft = el.scrollWidth; });
   renderDcf(c, hist, val);
@@ -435,17 +439,43 @@ function renderSegments(c) {
 }
 
 // ---------- Statements ----------
+// On screen the tables show the latest years only; the full history is in the downloads.
+const TABLE_YEARS = 5;
+function moreInDownload(total) {
+  if (total <= TABLE_YEARS) return '';
+  return `<div class="more-dl"><span>🔒 The table shows the last ${TABLE_YEARS} years. <b>All ${total} years</b> are in the Excel and PDF files.</span>
+    <button type="button" class="btn btn-accent btn-sm" data-open-dl>⬇ Download all ${total} years</button></div>`;
+}
+// Tables are for reading, not copying: no selecting, copying or right-click menu on them.
+function protect(el) {
+  if (!el || el.dataset.protected) return;
+  el.dataset.protected = '1';
+  el.classList.add('no-copy');
+  ['copy', 'cut', 'contextmenu', 'selectstart', 'dragstart'].forEach((ev) => el.addEventListener(ev, (e) => e.preventDefault()));
+}
+function wireMoreDownload(root) {
+  root.querySelectorAll('[data-open-dl]').forEach((b) => b.addEventListener('click', () => {
+    const btn = $('#dl-btn');
+    btn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => btn?.click(), 350);
+  }));
+}
+
 function renderStatement(kind) {
   const c = state.company, cur = state.cur, pal = palette();
   const rows = { income: INCOME_ROWS, balance: BALANCE_ROWS, cashflow: CASHFLOW_ROWS }[kind];
   const data = c[kind];
+  const shown = data.slice(-TABLE_YEARS);
   const years = data.map((r) => `FY${r.fiscalYear}`);
   const perShare = new Set(['eps', 'epsDiluted']);
   const totals = new Set(['grossProfit', 'operatingIncome', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity', 'operatingCashFlow', 'freeCashFlow']);
   const cell = (field, v) => (perShare.has(field) ? (isNum(v) ? plain(v) : DASH) : millions(v));
-  $('#st-table').innerHTML = `<table class="rt compact"><thead><tr><th>${kind === 'income' ? 'Income statement' : kind === 'balance' ? 'Balance sheet' : 'Cash flow statement'}</th>${years.map((y) => `<th>${y}</th>`).join('')}</tr></thead>
-    <tbody>${rows.filter(([f]) => data.some((r) => isNum(r[f]))).map(([f, label, ex]) => `<tr class="${totals.has(f) ? 'total' : ''}"><td title="${ex}"><span class="rname">${label} <span class="info" aria-label="${ex}">ⓘ</span></span></td>${data.map((r) => `<td class="${isNum(r[f]) && r[f] < 0 ? 'neg' : ''}">${cell(f, r[f])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  $('#st-table').innerHTML = `<table class="rt compact"><thead><tr><th>${kind === 'income' ? 'Income statement' : kind === 'balance' ? 'Balance sheet' : 'Cash flow statement'}</th>${shown.map((r) => `<th>FY${r.fiscalYear}</th>`).join('')}</tr></thead>
+    <tbody>${rows.filter(([f]) => shown.some((r) => isNum(r[f]))).map(([f, label, ex]) => `<tr class="${totals.has(f) ? 'total' : ''}"><td title="${ex}"><span class="rname">${label} <span class="info" aria-label="${ex}">ⓘ</span></span></td>${shown.map((r) => `<td class="${isNum(r[f]) && r[f] < 0 ? 'neg' : ''}">${cell(f, r[f])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   $('#st-table').scrollLeft = 0;
+  protect($('#st-table'));
+  $('#st-more').innerHTML = moreInDownload(data.length);
+  wireMoreDownload($('#st-more'));
 
   const m = (k) => data.map((r) => (isNum(r[k]) ? r[k] : null));
   const fmt = (v) => compact(v, cur);
@@ -504,10 +534,10 @@ const safeMargin = (a, b) => (isNum(a) && isNum(b) && b > 0 ? a / b : null);
 // ---------- Ratios ----------
 function fmtRatio(v, f) { return f === 'pct' ? pct(v) : f === 'x1' ? times(v) : times(v, 2); }
 function ratioTable(ratios) {
-  const rows = ratios; // oldest to newest
+  const rows = ratios; // oldest to newest (the latest years only, see TABLE_YEARS)
   const cols = rows.length + 2;
   const cell = (v, f) => (isNum(v) ? fmtRatio(v, f) : '<span class="na" title="Not reported, or not meaningful (e.g. negative profit or equity)">—</span>');
-  return `<table class="rt compact"><thead><tr><th>Ratio</th>${rows.map((y) => `<th>FY${y.fiscalYear}</th>`).join('')}<th>Average</th></tr></thead><tbody>
+  return `<table class="rt compact"><thead><tr><th>Ratio</th>${rows.map((y) => `<th>FY${y.fiscalYear}</th>`).join('')}<th>${rows.length}-yr average</th></tr></thead><tbody>
     ${RATIO_ROWS.map((r) => (r.group ? `<tr class="grp"><td colspan="${cols}"><span class="grp-label">${r.group}</span></td></tr>`
     : `<tr><td title="${r.explain}"><span class="rname">${r.label} <span class="info" aria-label="${r.explain}">ⓘ</span></span></td>${rows.map((y) => `<td class="${isNum(y[r.key]) && y[r.key] < 0 ? 'neg' : ''}">${cell(y[r.key], r.fmt)}</td>`).join('')}<td><b>${cell(average(ratios.map((y) => y[r.key])), r.fmt)}</b></td></tr>`)).join('')}
   </tbody></table>`;
@@ -681,11 +711,16 @@ function renderDcf(c, hist, val) {
   const lastInc = [...c.income].reverse().find((r) => isNum(r.revenue) && r.revenue > 0) || c.income[c.income.length - 1];
   const g5 = hist.revenueCagr5 ?? hist.revenueCagr;
   const m5 = hist.avgFcfMargin5 ?? hist.avgFcfMargin;
+  // Mature margin: never below today's margin (growth spending only lowers cash flow).
+  const mm5 = isNum(hist.avgMatureMargin5) && isNum(m5) ? Math.max(hist.avgMatureMargin5, m5) : m5;
   const w0 = estimateWacc(c, val);
+  // Long-term investments (bonds, stakes) belong to the shareholders on top of the business itself.
+  const netDebt = (val.netDebt || 0) - (val.longTermInvestments || 0);
   const defaults = {
     growth: isNum(g5) ? g5 * 100 : 2.5,
     years: 10,
     margin: isNum(m5) ? m5 * 100 : 5,
+    mature: isNum(mm5) ? mm5 * 100 : 5,
     discount: Math.round(w0.wacc * 20) / 20,
     terminal: 2.5,
   };
@@ -694,6 +729,7 @@ function renderDcf(c, hist, val) {
     { id: 'growth', label: 'Revenue growth during the growth period', min: -20, max: 60, step: 0.1, why: isNum(g5) ? `Default: the company's average growth over the <b>last ${hist.span5} years</b>: revenue went from ${compact(hist.cagr5From.value, cur)} (FY${hist.cagr5From.year}) to ${compact(hist.cagr5To.value, cur)} (FY${hist.cagr5To.year}) = <b>${pct(g5)} a year</b>.${isNum(hist.revenueCagr) && hist.span > hist.span5 ? ` Over the whole history shown (FY${hist.cagr5To.year - hist.span}–FY${hist.cagr5To.year}) it was ${pct(hist.revenueCagr)} a year.` : ''}`
       : 'Revenue history is incomplete, so the default is 2.5% (long-run economic growth). Set your own estimate.' },
     { id: 'margin', label: 'Free cash flow margin', min: -20, max: 60, step: 0.1, why: `Default: its average free cash flow ÷ revenue over the last 5 years (${pct(m5)}).` },
+    { id: 'mature', label: 'Free cash flow margin once mature', min: -20, max: 60, step: 0.1, why: `Default: ${pct(mm5)}, the margin of the last 5 years if the company had spent only enough to replace worn-out equipment (spending on new capacity, which buys growth, left out). When growth slows down after the growth period, that extra spending is no longer needed, so the margin moves to this level.` },
     { id: 'years', label: 'Growth period', unit: 'years', min: 1, max: 15, step: 1, why: 'Default 10 years: how long the company keeps growing at the rate above. After it, growth slows step by step over 5 years to the long-term rate.' },
     { id: 'discount', label: 'Discount rate (WACC)', min: 3, max: 16, step: 0.05, why: '<span id="wacc-why"></span>' },
     { id: 'terminal', label: 'Long-term growth, forever after', min: 0, max: 4, step: 0.25, why: 'Default 2.5%: roughly long-run economic growth (inflation + real growth). Must stay below the WACC.' },
@@ -732,11 +768,14 @@ function renderDcf(c, hist, val) {
     const v = read();
     sliders.forEach((s) => { $(`#o-${s.id}`).textContent = s.unit ? `${v[s.id]} ${s.unit}` : `${v[s.id].toFixed(s.step < 0.1 || s.step === 0.25 ? 2 : 1)}%`; });
     const run = (g, d) => {
-      const r = dcf({ revenue: lastInc.revenue, growth: g / 100, fcfMargin: v.margin / 100, discount: d / 100, terminalGrowth: v.terminal / 100, netDebt: val.netDebt, shares, highYears: v.years, years: v.years + 5 });
+      const r = dcf(params(g, d));
       // Per-share value in the currency (and share units) the price is quoted in.
       if (r && !r.error) r.perShare = isNum(val.fx) && isNum(val.priceShares) && val.priceShares > 0 ? (r.equityValue * val.fx) / val.priceShares : pcur === cur ? r.perShare : null;
       return r;
     };
+    function params(g, d) {
+      return { revenue: lastInc.revenue, growth: g / 100, fcfMargin: v.margin / 100, matureMargin: v.mature / 100, discount: d / 100, terminalGrowth: v.terminal / 100, netDebt, shares, highYears: v.years, years: v.years + 5, midYear: true };
+    }
     const r = run(v.growth, v.discount);
     const out = $('#dcf-out');
     if (!r || r.error) {
@@ -745,23 +784,29 @@ function renderDcf(c, hist, val) {
     }
     const price = val.price;
     const diff = isNum(r.perShare) && isNum(price) && r.perShare > 0 ? price / r.perShare - 1 : null;
+    // Reverse DCF: which growth would make the model value equal to today's market value?
+    const ig = isNum(val.marketCap) ? impliedGrowth(params(v.growth, v.discount), val.marketCap) : null;
+    const impliedHtml = isNum(ig) ? `<div class="implied"><b>What the price assumes:</b> with the other assumptions unchanged, today's price of ${money(price, pcur)} matches this model if revenue ${ig < 0 ? 'shrinks' : 'grows'}
+      <b>${pct(Math.abs(ig))} a year</b> for ${v.years} years, compared with ${pct(v.growth / 100)} in the model${isNum(hist.revenueCagr5) ? ` and ${pct(hist.revenueCagr5)} over the last ${hist.span5} years` : ''}.
+      ${ig > v.growth / 100 + 0.005 ? 'Investors expect faster growth, better margins or less risk than the history shows.' : ig < v.growth / 100 - 0.005 ? 'The market expects slower growth than the history, or sees more risk.' : 'The market and the history agree.'}</div>` : '';
     out.innerHTML = `
       <div class="answer iv"><div class="label">⭐ Intrinsic value per share (DCF), with these assumptions</div>
         <div class="value">${isNum(r.perShare) ? (r.perShare > 0 ? money(r.perShare, pcur) : 'Below zero') : DASH}</div>
         ${isNum(price) ? `<div class="iv-compare"><span>Intrinsic value <b>${isNum(r.perShare) && r.perShare > 0 ? money(r.perShare, pcur) : DASH}</b></span><span>Market price <b>${money(price, pcur)}</b></span></div>` : ''}
         <p class="say">${isNum(diff) ? `The current price of ${money(price, pcur)} is <b>${pct(Math.abs(diff))} ${diff >= 0 ? 'above' : 'below'}</b> this model value. Change the assumptions to see what the price implies.` :
     r.perShare <= 0 ? 'With these assumptions the projected cash flows do not cover the company\'s net debt.' : ''}</p></div>
+      ${impliedHtml}
       <div class="stats">
-        ${stat('Enterprise value', compact(r.enterpriseValue, cur))}${stat(val.netDebt >= 0 ? '− Net debt' : '+ Net cash', compact(Math.abs(val.netDebt), cur))}
+        ${stat('Enterprise value', compact(r.enterpriseValue, cur))}${stat(netDebt >= 0 ? '− Net debt' : '+ Net cash & investments', compact(Math.abs(netDebt), cur))}
         ${stat('Equity value', compact(r.equityValue, cur))}${stat('Shares', isNum(shares) ? `${(shares / 1e6).toLocaleString('en-US', { maximumFractionDigits: 0 })}M` : DASH)}
         ${stat('Share of value from after the forecast', pct(r.terminalShare, 0))}
       </div>
       <div class="card"><h3 style="margin-top:0">Revenue and free cash flow: history and projection</h3><div class="chart-box tall"><canvas id="c-dcf"></canvas></div></div>
 
       <details class="card" style="margin-top:16px"><summary style="cursor:pointer;font-weight:800">See the year-by-year projection</summary>
-        <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Year</th><th>Growth</th><th>Revenue</th><th>Free cash flow</th><th>Value today</th></tr></thead><tbody>
-        ${r.rows.map((x) => `<tr><td>${lastInc.fiscalYear + x.year}</td><td>${pct(x.growth)}</td><td>${compact(x.revenue, cur)}</td><td>${compact(x.fcf, cur)}</td><td>${compact(x.pv, cur)}</td></tr>`).join('')}
-        <tr class="total"><td>After ${lastInc.fiscalYear + r.rows.length}</td><td>${pct(v.terminal / 100)}</td><td></td><td>Terminal value ${compact(r.terminalValue, cur)}</td><td>${compact(r.pvTerminal, cur)}</td></tr>
+        <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Year</th><th>Growth</th><th>Revenue</th><th>FCF margin</th><th>Free cash flow</th><th>Value today</th></tr></thead><tbody>
+        ${r.rows.map((x) => `<tr><td>${lastInc.fiscalYear + x.year}</td><td>${pct(x.growth)}</td><td>${compact(x.revenue, cur)}</td><td>${pct(x.margin)}</td><td>${compact(x.fcf, cur)}</td><td>${compact(x.pv, cur)}</td></tr>`).join('')}
+        <tr class="total"><td>After ${lastInc.fiscalYear + r.rows.length}</td><td>${pct(v.terminal / 100)}</td><td></td><td>${pct(v.mature / 100)}</td><td>Terminal value ${compact(r.terminalValue, cur)}</td><td>${compact(r.pvTerminal, cur)}</td></tr>
         </tbody></table></div></details>
       ${arrow('The model is only as good as its assumptions. Using the company\'s history as the starting point is a neutral choice, not a forecast: the past does not guarantee the future.')}`;
     $('#dcf-sens').innerHTML = `<h3 style="margin-top:0">🎯 Sensitivity: value per share</h3><p class="small muted" style="margin-top:0">How the result changes with the discount rate (rows) and growth (columns).</p>

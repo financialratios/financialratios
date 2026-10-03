@@ -131,23 +131,28 @@ export function dividendIncome({ invested, yieldRate, dividendGrowth = 0, priceG
  *  - free cash flow = revenue x fcfMargin
  *  - after the last year: Gordon growth terminal value
  */
-export function dcf({ revenue, growth, fcfMargin, discount, terminalGrowth, years = 10, highYears = 5, netDebt = 0, shares }) {
+export function dcf({ revenue, growth, fcfMargin, matureMargin, discount, terminalGrowth, years = 10, highYears = 5, netDebt = 0, shares, midYear = false }) {
   if (!isNum(revenue) || !isNum(growth) || !isNum(fcfMargin) || !isNum(discount) || !isNum(terminalGrowth)) return null;
   if (discount <= terminalGrowth) return { error: 'The discount rate must be higher than the long-term growth rate.' };
+  // As growth slows, less money is needed to build new capacity, so the margin moves towards the mature margin.
+  const mature = isNum(matureMargin) ? matureMargin : fcfMargin;
+  // Mid-year convention: cash comes in through the year, not all on 31 December.
+  const shift = midYear ? 0.5 : 0;
   const rows = [];
   let rev = revenue, pvSum = 0;
   for (let y = 1; y <= years; y++) {
-    const g = y <= highYears ? growth : growth + ((terminalGrowth - growth) * (y - highYears)) / (years - highYears);
+    const fade = y <= highYears ? 0 : (y - highYears) / (years - highYears);
+    const g = growth + (terminalGrowth - growth) * fade;
+    const margin = fcfMargin + (mature - fcfMargin) * fade;
     rev *= 1 + g;
-    const fcf = rev * fcfMargin;
-    const factor = (1 + discount) ** y;
-    const pv = fcf / factor;
+    const fcf = rev * margin;
+    const pv = fcf / (1 + discount) ** (y - shift);
     pvSum += pv;
-    rows.push({ year: y, growth: g, revenue: rev, fcf, pv });
+    rows.push({ year: y, growth: g, margin, revenue: rev, fcf, pv });
   }
-  const lastFcf = rows[rows.length - 1].fcf;
+  const lastFcf = rows[rows.length - 1].revenue * mature;
   const terminalValue = (lastFcf * (1 + terminalGrowth)) / (discount - terminalGrowth);
-  const pvTerminal = terminalValue / (1 + discount) ** years;
+  const pvTerminal = terminalValue / (1 + discount) ** (years - shift);
   const enterpriseValue = pvSum + pvTerminal;
   const equityValue = enterpriseValue - (netDebt || 0);
   return {
@@ -155,6 +160,20 @@ export function dcf({ revenue, growth, fcfMargin, discount, terminalGrowth, year
     perShare: shares ? equityValue / shares : null,
     terminalShare: safeDiv(pvTerminal, enterpriseValue),
   };
+}
+
+/** Reverse DCF: the yearly revenue growth that makes the model value equal to a target equity value. */
+export function impliedGrowth(params, targetEquity) {
+  if (!isNum(targetEquity)) return null;
+  const at = (g) => dcf({ ...params, growth: g })?.equityValue;
+  let lo = -0.3, hi = 1;
+  const vLo = at(lo), vHi = at(hi);
+  if (!isNum(vLo) || !isNum(vHi) || (vLo - targetEquity) * (vHi - targetEquity) > 0) return null;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if ((at(mid) - targetEquity) * (vLo - targetEquity) > 0) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
 }
 
 /** Simple earnings-based value: grow EPS, apply an exit P/E, discount back. */
@@ -221,7 +240,15 @@ export function historySummary(company) {
   const rev = company.income.map((r) => r.revenue);
   const ni = company.income.map((r) => r.netIncome);
   const eps = company.income.map((r) => r.epsDiluted ?? r.eps);
-  const fcf = company.cashflow.map((r) => r.freeCashFlow);
+  // Cash flow rows matched to income rows by fiscal year (the two lists can differ in length).
+  const cfOf = new Map(company.cashflow.map((r) => [r.fiscalYear, r]));
+  const cfRows = company.income.map((r) => cfOf.get(r.fiscalYear) || {});
+  const fcf = cfRows.map((r) => r.freeCashFlow);
+  // "Mature" cash flow: what is left if the company only spent enough to replace worn-out assets
+  // (capital spending capped at depreciation), i.e. without the extra spending that buys growth.
+  const matureCf = cfRows.map((r) => (isNum(r.operatingCashFlow) && isNum(r.capitalExpenditure) && isNum(r.depreciationAmortization) && r.depreciationAmortization > 0
+    ? r.operatingCashFlow - Math.min(Math.abs(r.capitalExpenditure), r.depreciationAmortization)
+    : r.freeCashFlow));
   const years = company.income.map((r) => r.fiscalYear);
   // Only years where revenue was actually reported count: a missing year must not break the averages.
   const valid = rev.map((v, i) => (isNum(v) && v > 0 ? i : -1)).filter((i) => i >= 0);
@@ -254,6 +281,7 @@ export function historySummary(company) {
     fcfCagr: between(fcf),
     avgFcfMargin: average(company.income.map((inc, i) => safeDiv(fcf[i], inc.revenue))),
     avgFcfMargin5: average(company.income.map((inc, i) => (years[lastIdx] - years[i] < 5 ? safeDiv(fcf[i], inc.revenue) : null))),
+    avgMatureMargin5: average(company.income.map((inc, i) => (years[lastIdx] - years[i] < 5 ? safeDiv(matureCf[i], inc.revenue) : null))),
   };
 }
 
@@ -276,6 +304,7 @@ export function currentValuation(company) {
   const pos = (x) => (isNum(x) && x > 0 ? x : null);
   return {
     price, shares, marketCap, netDebt, enterpriseValue: ev, fx,
+    longTermInvestments: isNum(b.longTermInvestments) && b.longTermInvestments > 0 ? b.longTermInvestments : 0,
     // Shares measured in the units the price is quoted in (handles ADRs and share classes).
     priceShares: isNum(quoteCap) && isNum(price) && price > 0 ? quoteCap / price : shares,
     pe: pos(inc.netIncome) ? safeDiv(marketCap, inc.netIncome) : null,
