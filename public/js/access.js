@@ -1,6 +1,11 @@
 // Download allowance: 3 free downloads per browser, then a 5-download pack or Premium (unlimited).
-// Paid access is tied to an access code (RAT-XXXX-XXXX-XXXX) checked by the server.
+// Purchases happen on Gumroad; the Gumroad license key is the buyer's access code, checked by the server.
+// While no Gumroad product is set up in config.js, downloads are free and unlimited.
 import { escapeHtml } from './lib/format.js';
+import { SITE } from './config.js';
+
+const shop = SITE.gumroad || {};
+export const paymentsOn = Object.values(shop).some((p) => p && p.url);
 
 export const FREE_LIMIT = 3;
 const K_USED = 'fr-free-downloads-used', K_CODE = 'fr-access-code';
@@ -40,6 +45,7 @@ export function saveCode(code) { set(K_CODE, code); }
 
 /** Text for the small counter under the download button. */
 export function quotaText() {
+  if (!paymentsOn) return '';
   if (license?.unlimited) return '⭐ Premium: unlimited downloads';
   const free = freeLeft();
   const paid = license?.plan === 'pack' ? license.credits || 0 : 0;
@@ -52,6 +58,7 @@ export function renderQuota(el) { if (el) el.innerHTML = quotaText(); }
 
 /** Ask permission for one download. Resolves true when allowed (and counts it), false otherwise (paywall shown). */
 export async function requestDownload() {
+  if (!paymentsOn) return true;
   if (savedCode() && !license) await refreshLicense();
   if (license?.unlimited) return true;
   if (freeLeft() > 0) {
@@ -67,18 +74,12 @@ export async function requestDownload() {
   return false;
 }
 
-export async function startCheckout(plan, btn) {
-  const label = btn?.textContent;
-  if (btn) { btn.disabled = true; btn.textContent = 'Opening secure payment…'; }
-  try {
-    const res = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan }) });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.error);
-    location.href = body.url;
-  } catch (e) {
-    alert(e.message || 'Payment could not be started. Please try again.');
-    if (btn) { btn.disabled = false; btn.textContent = label; }
-  }
+/** Open the Gumroad checkout for a plan in a new tab; the buyer comes back with a license key. */
+export function startCheckout(plan) {
+  const url = shop[plan]?.url;
+  if (!url) { alert('Payments are not switched on yet. Please try again soon.'); return; }
+  window.open(`${url}${url.includes('?') ? '&' : '?'}wanted=true`, '_blank', 'noopener');
+  document.querySelectorAll('.after-pay').forEach((el) => { el.hidden = false; });
 }
 
 /** The three offers, shared by the paywall and the Premium page. */
@@ -107,12 +108,13 @@ export function offersHtml() {
       <button class="btn btn-accent" data-plan="yearly" type="button">Go Premium yearly</button>
     </div>
   </div>
-  <p class="small muted center" style="margin:10px 0 0">Secure payment by Stripe (cards, Apple Pay, Google Pay). Prices include VAT where applicable.
-    After paying you get an access code by email to use on any device.</p>`;
+  <p class="small muted center" style="margin:10px 0 0">Secure payment through Gumroad (cards, PayPal, Apple Pay, Google Pay), in a new tab. Prices include VAT where applicable.
+    After paying, Gumroad shows and emails you a <b>license key</b>: paste it below to unlock your downloads on any device.</p>
+  <div class="notice after-pay" hidden>✅ Finished paying? Copy the <b>license key</b> from the Gumroad page or receipt email and paste it in the box below.</div>`;
 }
 
 export function wireOffers(root) {
-  root.querySelectorAll('[data-plan]').forEach((b) => b.addEventListener('click', () => startCheckout(b.dataset.plan, b)));
+  root.querySelectorAll('[data-plan]').forEach((b) => b.addEventListener('click', () => startCheckout(b.dataset.plan)));
 }
 
 export function showPaywall() {
@@ -127,8 +129,8 @@ export function showPaywall() {
     <h2 style="margin-top:0">You've used your ${FREE_LIMIT} free downloads 🎁</h2>
     <p class="muted" style="margin-top:0">To keep downloading financial statements, choose one of these options:</p>
     ${offersHtml()}
-    <form class="pw-code" id="pw-code"><label for="pw-code-in">Already paid? Enter your access code</label>
-      <div style="display:flex;gap:8px"><input type="text" id="pw-code-in" placeholder="RAT-XXXX-XXXX-XXXX" autocomplete="off"><button class="btn btn-ghost btn-sm" type="submit">Activate</button></div>
+    <form class="pw-code" id="pw-code"><label for="pw-code-in">Already paid? Paste your license key</label>
+      <div style="display:flex;gap:8px"><input type="text" id="pw-code-in" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" autocomplete="off"><button class="btn btn-ghost btn-sm" type="submit">Activate</button></div>
       <div id="pw-code-msg" class="small"></div></form>`;
   wireOffers(dlg);
   dlg.querySelector('.pw-close').addEventListener('click', () => dlg.close());

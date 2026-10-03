@@ -39,9 +39,10 @@ docs/LAUNCH-PLAN.md  ← step-by-step plan to go live
 * `DEMO` always shows a fictional sample company.
 
 ## Downloads and Premium
-Each browser gets 3 free downloads (counted in local storage). Then visitors can buy 5 downloads (€0.99), Premium monthly (€4.99) or yearly (€49.99)
-through Stripe Checkout. The server (`server/payments.mjs`) creates an access code (`RAT-XXXX-XXXX-XXXX`), stores it in Netlify Blobs
-(`.data/licenses.json` locally) and emails a personal thank-you through Resend. Setup: `docs/LAUNCH-PLAN.md` → step 6b.
+Sold through Gumroad. While no product is set in `gumroad` in `public/js/config.js`, downloads are free and unlimited. Once set, each browser
+gets 3 free downloads, then visitors buy 5 downloads (€0.99), Premium monthly (€4.99) or yearly (€49.99) on Gumroad. The Gumroad license key is
+the access code: `server/payments.mjs` checks it with Gumroad's license API (pack downloads are counted as license "uses"). An optional Gumroad
+ping sends a personal thank-you email through Resend. Setup: `docs/LAUNCH-PLAN.md` → step 6b.
 
 ## Reviews
 `/reviews.html` lets visitors post a name, star rating and text. They are stored in Netlify Blobs on Netlify (`.data/reviews.json` when running locally). See `docs/LAUNCH-PLAN.md` → "Managing reviews" to delete one.

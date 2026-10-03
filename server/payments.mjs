@@ -1,27 +1,30 @@
-// Paid downloads and Premium, with Stripe Checkout (cards never touch this server) and a
-// thank-you email through Resend. Everything is configured with environment variables:
+// Paid downloads and Premium, sold through Gumroad (Gumroad takes the payment, handles VAT
+// and emails the buyer a license key). The license key is the buyer's access code: this
+// server asks Gumroad's license API what a key allows, so no secret keys are needed.
 //
-//   STRIPE_SECRET_KEY        sk_live_... (or sk_test_... while testing)
-//   STRIPE_WEBHOOK_SECRET    whsec_...   (from the webhook you create in Stripe)
-//   STRIPE_PRICE_PACK5       price_...   one-time  €0.99  → 5 extra downloads
-//   STRIPE_PRICE_MONTHLY     price_...   recurring €4.99 / month → unlimited
-//   STRIPE_PRICE_YEARLY      price_...   recurring €49.99 / year → unlimited
-//   RESEND_API_KEY           re_...      (optional: thank-you emails)
-//   EMAIL_FROM               "Financial Rat <hello@yourdomain.com>"
-//   SITE_URL                 https://www.yourdomain.com
+// Setup: create 3 products on Gumroad with "Generate a unique license key per sale" switched on,
+// then paste each product's link and product ID into `gumroad` in public/js/config.js.
 //
-// A buyer receives an access code (shown after paying and in the email). The code is what unlocks
-// downloads on any device. Codes are stored in Netlify Blobs (store "licenses").
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+//   pack5    one-time  €0.99         → 5 downloads (counted with Gumroad's license "uses")
+//   monthly  membership €4.99 / month → unlimited while the membership is active
+//   yearly   membership €49.99 / year → unlimited while the membership is active
+//
+// Optional thank-you email (personal, starts with the buyer's name): set RESEND_API_KEY and
+// EMAIL_FROM on Netlify and add https://YOUR-DOMAIN/api/gumroad-ping as the Ping URL in
+// Gumroad → Settings → Advanced.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { SITE } from '../public/js/config.js';
 
 export const PLANS = {
-  pack5: { label: '5 extra downloads', price: '€0.99', mode: 'payment', env: 'STRIPE_PRICE_PACK5', credits: 5 },
-  monthly: { label: 'Premium — monthly', price: '€4.99 / month', mode: 'subscription', env: 'STRIPE_PRICE_MONTHLY' },
-  yearly: { label: 'Premium — yearly', price: '€49.99 / year', mode: 'subscription', env: 'STRIPE_PRICE_YEARLY' },
+  pack5: { label: '5 extra downloads', price: '€0.99', credits: 5 },
+  monthly: { label: 'Premium — monthly', price: '€4.99 / month' },
+  yearly: { label: 'Premium — yearly', price: '€49.99 / year' },
 };
 
-// ---------- storage (same approach as reviews) ----------
+const products = (cfg = SITE.gumroad || {}) => Object.fromEntries(Object.keys(PLANS)
+  .map((plan) => [plan, String(cfg[plan]?.productId || '').trim()]).filter(([, id]) => id));
+
+// ---------- storage (same approach as reviews): remembers which product a key belongs to ----------
 let storePromise = null;
 export function setLicenseStoreForTests(store) { storePromise = Promise.resolve(store); }
 function fileStore(path = '.data/licenses.json') {
@@ -44,55 +47,49 @@ async function getStore(env) {
   return storePromise;
 }
 
-// ---------- Stripe REST helpers (no SDK needed) ----------
-function form(obj, prefix = '', out = new URLSearchParams()) {
-  for (const [k, v] of Object.entries(obj)) {
-    const key = prefix ? `${prefix}[${k}]` : k;
-    if (v && typeof v === 'object') form(v, key, out);
-    else if (v !== undefined && v !== null) out.append(key, String(v));
-  }
-  return out;
-}
-async function stripe(env, path, { method = 'GET', body, fetchImpl = fetch } = {}) {
-  const res = await fetchImpl(`https://api.stripe.com/v1/${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, ...(body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) },
-    body: body ? form(body).toString() : undefined,
+// ---------- Gumroad license API ----------
+async function verifyKey(productId, key, { increment = false, fetchImpl = fetch } = {}) {
+  const res = await fetchImpl('https://api.gumroad.com/v2/licenses/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ product_id: productId, license_key: key, increment_uses_count: String(increment) }).toString(),
   });
-  const json = await res.json();
-  if (!res.ok) throw Object.assign(new Error(json.error?.message || `Stripe error ${res.status}`), { status: 502 });
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 404 || json.success === false) return null; // not a key of this product
+  if (!res.ok) throw Object.assign(new Error('Gumroad could not be reached. Please try again in a minute.'), { status: 502 });
   return json;
 }
 
-/** Verify Stripe's webhook signature (header "Stripe-Signature: t=...,v1=..."). */
-export function verifyStripeSignature(rawBody, header, secret, toleranceSec = 300, now = Date.now()) {
-  if (!header || !secret) return false;
-  const parts = Object.fromEntries(header.split(',').map((p) => p.split('=')).map(([k, ...v]) => [k, v.join('=')]));
-  const t = Number(parts.t);
-  if (!t || Math.abs(now / 1000 - t) > toleranceSec) return false;
-  const expected = createHmac('sha256', secret).update(`${t}.${rawBody}`).digest('hex');
-  const given = header.split(',').filter((p) => p.startsWith('v1=')).map((p) => p.slice(3));
-  return given.some((g) => g.length === expected.length && timingSafeEqual(Buffer.from(g), Buffer.from(expected)));
-}
-
-const newCode = () => {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
-  const b = randomBytes(12);
-  const raw = [...b].map((x) => alphabet[x % alphabet.length]).join('');
-  return `RAT-${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
-};
-
-function periodEnd(sub) {
-  return sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end ?? null;
-}
-
-export function licenseStatus(lic, now = Date.now()) {
-  if (!lic) return { valid: false };
-  if (lic.plan === 'monthly' || lic.plan === 'yearly') {
-    const active = ['active', 'trialing', 'past_due'].includes(lic.status) && (!lic.periodEnd || lic.periodEnd * 1000 > now - 3 * 864e5);
-    return { valid: true, plan: lic.plan, unlimited: active, active, renews: lic.periodEnd ? new Date(lic.periodEnd * 1000).toISOString().slice(0, 10) : null, name: lic.name };
+/** What a verified Gumroad license allows. */
+export function licenseStatus(plan, data) {
+  const p = data?.purchase || {};
+  const revoked = !!(p.refunded || p.chargebacked || (p.disputed && !p.dispute_won));
+  if (plan === 'pack5') {
+    const credits = revoked ? 0 : Math.max(0, PLANS.pack5.credits * (p.quantity || 1) - (data?.uses || 0));
+    return { valid: true, plan: 'pack', credits, unlimited: false };
   }
-  return { valid: true, plan: 'pack', credits: lic.credits || 0, unlimited: false, name: lic.name };
+  // A cancelled membership keeps working until the paid period ends (Gumroad then sets ended_at).
+  const active = !revoked && !p.subscription_ended_at && !p.subscription_failed_at;
+  return { valid: true, plan, unlimited: active, active };
+}
+
+const cleanKey = (k) => String(k || '').trim().toUpperCase();
+const keyShape = (k) => /^[A-Z0-9][A-Z0-9-]{7,63}$/.test(k);
+
+/** Find which of our products a key belongs to (remembered after the first time). */
+async function findLicense(env, ids, key, { increment = false, fetchImpl } = {}) {
+  const store = await getStore(env);
+  const known = await store.get(`key:${key}`);
+  const order = known && ids[known.plan] ? [known.plan, ...Object.keys(ids).filter((p) => p !== known.plan)] : Object.keys(ids);
+  for (const plan of order) {
+    // Only pack downloads use up the key; checking a membership never does.
+    const data = await verifyKey(ids[plan], key, { increment: increment && plan === 'pack5', fetchImpl });
+    if (data) {
+      if (!known || known.plan !== plan) await store.set(`key:${key}`, { plan });
+      return { plan, data };
+    }
+  }
+  return null;
 }
 
 // ---------- email ----------
@@ -103,8 +100,8 @@ export function thankYouEmail({ name, plan, code, siteUrl }) {
   const html = `<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#0f1b2d;max-width:560px">
   <p>Dear ${first},</p>
   <p>Thank you for your trust in <b>Financial Rat</b>. Your purchase of <b>${what}</b> is active.</p>
-  <p>Your personal access code is:<br><span style="font-size:22px;font-weight:bold;letter-spacing:2px;color:#0e9f6e">${code}</span><br>
-  Keep it safe: enter it on <a href="${siteUrl}/premium.html">${siteUrl}/premium.html</a> to unlock your downloads on any other device.</p>
+  <p>Your personal license key (access code) is:<br><span style="font-size:18px;font-weight:bold;letter-spacing:1px;color:#0e9f6e">${code}</span><br>
+  Keep it safe: enter it on <a href="${siteUrl}/premium.html">${siteUrl}/premium.html</a> to unlock your downloads on any device.</p>
   <p>Financial Rat is built together with its users, so your opinion matters a lot to us:</p>
   <ul><li><b>How are you finding the website?</b> We would be grateful for a short review: <a href="${siteUrl}/reviews.html">${siteUrl}/reviews.html</a></li>
   <li><b>What should we change or add?</b> Simply reply to this email. We read every message.</li></ul>
@@ -122,110 +119,59 @@ async function sendEmail(env, { to, subject, html }, fetchImpl = fetch) {
   return res.ok;
 }
 
-// ---------- fulfilment (shared by the success page and the webhook; safe to run twice) ----------
-async function fulfil(env, session, fetchImpl) {
-  const store = await getStore(env);
-  const existing = await store.get(`session:${session.id}`);
-  if (existing) return existing.code;
-  if (session.payment_status !== 'paid' && session.status !== 'complete') throw Object.assign(new Error('This payment is not completed yet.'), { status: 402 });
-  const plan = session.metadata?.plan;
-  if (!PLANS[plan]) throw Object.assign(new Error('Unknown plan.'), { status: 400 });
-  const code = newCode();
-  const email = session.customer_details?.email || session.customer_email || '';
-  const name = session.customer_details?.name || '';
-  let sub = null;
-  if (PLANS[plan].mode === 'subscription' && session.subscription) {
-    sub = typeof session.subscription === 'object' ? session.subscription : await stripe(env, `subscriptions/${session.subscription}`, { fetchImpl });
+/** The buyer's name from a Gumroad ping: the full name, or a checkout field called "Name"/"First name". */
+function nameFromPing(p) {
+  for (const k of ['full_name', 'First name', 'first_name', 'Name', 'name', 'Your name', 'custom_fields[Name]', 'custom_fields[First name]']) {
+    if (p.get(k)) return p.get(k);
   }
-  const lic = {
-    code, plan: plan === 'pack5' ? 'pack' : plan, credits: plan === 'pack5' ? PLANS.pack5.credits : 0, email, name,
-    customer: session.customer || null, subscription: sub?.id || null, status: sub?.status || 'paid', periodEnd: periodEnd(sub),
-    created: new Date().toISOString(),
-  };
-  await store.set(`lic:${code}`, lic);
-  await store.set(`session:${session.id}`, { code });
-  if (sub?.id) await store.set(`sub:${sub.id}`, { code });
-  const mail = thankYouEmail({ name, plan, code, siteUrl: env.SITE_URL || '' });
-  await sendEmail(env, { to: email, ...mail }, fetchImpl).catch(() => false);
-  return code;
+  return '';
 }
 
 // ---------- API ----------
-export async function handlePayments(route, { method, url, body, headers = {}, env, fetchImpl = fetch }) {
-  const configured = !!(env.STRIPE_SECRET_KEY && env.STRIPE_PRICE_PACK5 && env.STRIPE_PRICE_MONTHLY && env.STRIPE_PRICE_YEARLY);
-  const store = await getStore(env);
+export async function handlePayments(route, { method, url, body, env, fetchImpl = fetch, gumroad = SITE.gumroad }) {
+  const ids = products(gumroad);
+  const configured = Object.keys(ids).length > 0;
 
-  if (route === 'license') { // GET ?code=  → what this code allows
-    const code = (url.searchParams.get('code') || '').trim().toUpperCase();
-    const lic = /^RAT-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code) ? await store.get(`lic:${code}`) : null;
-    if (!lic) return [404, { error: 'This access code was not found. Check it for typos.' }];
-    return [200, { code, ...licenseStatus(lic) }];
+  if (route === 'license') { // GET ?code=  → what this license key allows
+    const key = cleanKey(url.searchParams.get('code'));
+    if (!configured) return [503, { error: 'Payments are not switched on yet.' }];
+    const found = keyShape(key) ? await findLicense(env, ids, key, { fetchImpl }) : null;
+    if (!found) return [404, { error: 'This license key was not found. Copy it exactly as shown in your Gumroad receipt.' }];
+    return [200, { code: key, ...licenseStatus(found.plan, found.data) }];
   }
 
-  if (route === 'download' && method === 'POST') { // use one download from a paid code
+  if (route === 'download' && method === 'POST') { // use one download from a paid key
     let input = {};
     try { input = JSON.parse(body || '{}'); } catch { /* empty */ }
-    const code = String(input.code || '').trim().toUpperCase();
-    const lic = code ? await store.get(`lic:${code}`) : null;
-    if (!lic) return [404, { error: 'Access code not found.' }];
-    const st = licenseStatus(lic);
+    const key = cleanKey(input.code);
+    const found = keyShape(key) ? await findLicense(env, ids, key, { increment: true, fetchImpl }) : null;
+    if (!found) return [404, { error: 'License key not found.' }];
+    const st = licenseStatus(found.plan, found.data);
     if (st.unlimited) return [200, { ok: true, ...st }];
-    if (st.plan === 'pack' && lic.credits > 0) {
-      lic.credits -= 1;
-      await store.set(`lic:${code}`, lic);
-      return [200, { ok: true, ...licenseStatus(lic) }];
+    if (found.plan === 'pack5') {
+      // The use was just counted; it is allowed if it was within the 5 bought.
+      const allowed = PLANS.pack5.credits * (found.data.purchase?.quantity || 1);
+      if ((found.data.uses || 0) <= allowed && !found.data.purchase?.refunded) return [200, { ok: true, ...st }];
+      return [402, { ok: false, ...st, credits: 0, error: 'No downloads left on this license key.' }];
     }
-    return [402, { ok: false, ...st, error: st.plan === 'pack' ? 'No downloads left on this code.' : 'Your Premium subscription is not active.' }];
+    return [402, { ok: false, ...st, error: 'Your Premium membership is not active.' }];
   }
 
-  if (route === 'checkout' && method === 'POST') { // create a Stripe Checkout page
-    if (!configured) return [503, { error: 'Payments are not switched on yet. Please try again soon.' }];
-    let input = {};
-    try { input = JSON.parse(body || '{}'); } catch { /* empty */ }
-    const plan = PLANS[input.plan] ? input.plan : null;
-    if (!plan) return [400, { error: 'Unknown plan.' }];
-    const site = env.SITE_URL || `${url.protocol}//${url.host}`;
-    const session = await stripe(env, 'checkout/sessions', {
-      method: 'POST', fetchImpl,
-      body: {
-        mode: PLANS[plan].mode,
-        line_items: { 0: { price: env[PLANS[plan].env], quantity: 1 } },
-        success_url: `${site}/premium.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${site}/premium.html?cancelled=1`,
-        allow_promotion_codes: 'true',
-        billing_address_collection: 'auto',
-        metadata: { plan },
-        custom_text: { submit: { message: 'Digital content: your downloads are available immediately after payment, so you agree that the 14-day right of withdrawal ends once access starts. Subscriptions can be cancelled anytime.' } },
-        ...(PLANS[plan].mode === 'payment' ? { customer_creation: 'always' } : { subscription_data: { metadata: { plan } } }),
-      },
-    });
-    return [200, { url: session.url }];
-  }
-
-  if (route === 'claim') { // GET ?session_id=  → after paying, get the access code
-    if (!configured) return [503, { error: 'Payments are not switched on.' }];
-    const id = url.searchParams.get('session_id') || '';
-    if (!/^cs_[A-Za-z0-9_]+$/.test(id)) return [400, { error: 'Invalid payment reference.' }];
-    const session = await stripe(env, `checkout/sessions/${id}?expand[]=subscription`, { fetchImpl });
-    const code = await fulfil(env, session, fetchImpl);
-    return [200, { code, ...licenseStatus(await store.get(`lic:${code}`)) }];
-  }
-
-  if (route === 'stripe-webhook' && method === 'POST') { // Stripe tells us about payments and renewals
-    if (!verifyStripeSignature(body, headers['stripe-signature'], env.STRIPE_WEBHOOK_SECRET)) return [400, { error: 'Bad signature.' }];
-    const event = JSON.parse(body);
-    const obj = event.data?.object || {};
-    if (event.type === 'checkout.session.completed') await fulfil(env, obj, fetchImpl);
-    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
-      const link = await store.get(`sub:${obj.id}`);
-      const lic = link && (await store.get(`lic:${link.code}`));
-      if (lic) {
-        lic.status = event.type === 'customer.subscription.deleted' ? 'canceled' : obj.status;
-        lic.periodEnd = periodEnd(obj) ?? lic.periodEnd;
-        await store.set(`lic:${link.code}`, lic);
-      }
-    }
-    return [200, { received: true }];
+  if (route === 'gumroad-ping' && method === 'POST') { // Gumroad tells us about a sale → personal thank-you email
+    const p = new URLSearchParams(body || '');
+    const key = cleanKey(p.get('license_key'));
+    const plan = Object.entries(ids).find(([, id]) => id && id === p.get('product_id'))?.[0];
+    if (!plan || !keyShape(key) || p.get('is_recurring_charge') === 'true') return [200, { ok: true, skipped: true }];
+    // Never trust the ping alone: ask Gumroad whether this sale is real and use the email it reports.
+    const data = await verifyKey(p.get('product_id'), key, { fetchImpl });
+    if (!data) return [200, { ok: true, skipped: true }];
+    const store = await getStore(env);
+    if (await store.get(`mailed:${key}`)) return [200, { ok: true, duplicate: true }];
+    await store.set(`key:${key}`, { plan });
+    const mail = thankYouEmail({ name: nameFromPing(p), plan, code: key, siteUrl: env.SITE_URL || SITE.url });
+    const sent = await sendEmail(env, { to: data.purchase?.email, ...mail }, fetchImpl).catch(() => false);
+    if (sent) await store.set(`mailed:${key}`, { at: new Date().toISOString() });
+    return [200, { ok: true, emailed: sent }];
   }
 
   if (route === 'plans') return [200, { configured, plans: PLANS }];

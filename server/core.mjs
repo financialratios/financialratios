@@ -158,8 +158,8 @@ export async function handleApi(url, env = process.env, req = {}) {
   const cfg = config(env);
   const route = url.pathname.replace(/\/+$/, '').split('/').pop();
   try {
-    if (['license', 'download', 'checkout', 'claim', 'stripe-webhook', 'plans'].includes(route)) {
-      const [status, body] = await handlePayments(route, { method: req.method || 'GET', url, body: req.body, headers: req.headers || {}, env });
+    if (['license', 'download', 'gumroad-ping', 'plans'].includes(route)) {
+      const [status, body] = await handlePayments(route, { method: req.method || 'GET', url, body: req.body, env });
       return json(status, body);
     }
     if (route === 'reviews') {
