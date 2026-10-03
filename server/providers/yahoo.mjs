@@ -137,11 +137,12 @@ export function parseQuoteSummary(json) {
     website: ap.website || '',
     employees: ap.fullTimeEmployees || null,
     financialCurrency: r.financialData?.financialCurrency || null,
+    beta: raw(r.defaultKeyStatistics?.beta) ?? raw(r.summaryDetail?.beta) ?? null,
   };
 }
 
 export async function yahooProfile(symbol, fetchImpl = fetch) {
-  const json = await withCrumb(`${Q2}/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=assetProfile,price,financialData`, fetchImpl);
+  const json = await withCrumb(`${Q2}/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=assetProfile,price,financialData,defaultKeyStatistics,summaryDetail`, fetchImpl);
   return parseQuoteSummary(json);
 }
 
@@ -211,7 +212,7 @@ export async function yahooCompany(symbol, fetchImpl = fetch) {
       symbol, name: prof?.name || chart?.meta.name || symbol, exchange: prof?.exchange || chart?.meta.exchange || '',
       currency: prof?.currency || chart?.meta.currency || fund.currency || 'USD',
       sector: prof?.sector || '', industry: prof?.industry || '', description: prof?.description || '', website: prof?.website || '',
-      country: prof?.country || '', employees: prof?.employees || null, ipoDate: chart?.meta.firstTradeDate || null, logo: '', beta: null,
+      country: prof?.country || '', employees: prof?.employees || null, ipoDate: chart?.meta.firstTradeDate || null, logo: '', beta: prof?.beta ?? null,
       sharesOutstanding: prof?.marketCap && price ? prof.marketCap / price : null,
     },
     quote: {

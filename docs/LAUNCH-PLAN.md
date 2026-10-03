@@ -50,13 +50,38 @@ AdSense approves sites that have original, useful content. The lessons and calcu
 4. **Required in the EU:** in AdSense open **Privacy & messaging → European regulations** and publish Google's consent message (cookie banner). No code is needed.
 5. After approval, either turn on **Auto ads**, or create 3 display ad units and paste their slot IDs into `adSlots` in `public/js/config.js` (`top`, `middle`, `bottom`).
 
+## Step 6b: Switch on paid downloads (Stripe + Resend, about 1 hour)
+Everyone gets 3 free downloads. After that the site offers 5 downloads for €0.99, Premium monthly (€4.99) or Premium yearly (€49.99).
+Until the steps below are done, the payment buttons politely say "Payments are not switched on yet".
+1. **Business first.** Stripe pays out to a business or a sole trader. In Romania that means a PFA or an SRL. Ask an accountant about VAT (EU OSS) for digital sales.
+2. **Stripe account** at https://dashboard.stripe.com. Complete the activation (identity, bank account).
+3. **Products → Add product**, create three prices in EUR:
+   * "5 downloads", **one-off** price €0.99
+   * "Premium monthly", **recurring monthly** €4.99
+   * "Premium yearly", **recurring yearly** €49.99
+   Copy each price ID (it starts with `price_`).
+4. **Developers → Webhooks → Add endpoint**: URL `https://YOUR-DOMAIN/api/stripe-webhook`, events `checkout.session.completed`,
+   `customer.subscription.updated` and `customer.subscription.deleted`. Copy the **signing secret** (`whsec_…`).
+5. **Settings → Billing → Customer portal**: turn it on, so subscribers can cancel themselves from their receipt email.
+6. **Resend** (thank-you emails) at https://resend.com: add your domain, add the DNS records it shows you at your registrar, wait until it says *Verified*,
+   then create an API key.
+7. On Netlify, **Environment variables**, add:
+   * `STRIPE_SECRET_KEY` = `sk_live_…` (use `sk_test_…` first to try it with the test card 4242 4242 4242 4242)
+   * `STRIPE_WEBHOOK_SECRET` = `whsec_…`
+   * `STRIPE_PRICE_PACK5`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` = the three `price_…` IDs
+   * `RESEND_API_KEY` = `re_…`
+   * `EMAIL_FROM` = `Financial Rat <hello@YOUR-DOMAIN>` (and optionally `EMAIL_REPLY_TO` = your own inbox, so replies to the thank-you email reach you)
+   * `SITE_URL` = `https://YOUR-DOMAIN`
+   Then **Deploys → Trigger deploy**.
+8. Test: in test mode, buy each option once. You should land on `/premium.html` with your access code and receive the "Dear …" thank-you email.
+
 ## Step 7: Help people find the site (ongoing)
 1. Add the site to **Google Search Console** (https://search.google.com/search-console) and submit `https://yourdomain/sitemap.xml`.
 2. Share the lessons and calculators on Reddit (r/investing, r/personalfinance, r/eupersonalfinance), in Romanian finance groups, and on TikTok or Instagram with short "explained simply" videos.
 
 ## Step 8: Later monetization
 * **Affiliates:** brokers (eToro, Interactive Brokers, XTB, Trading 212) and books. Mark affiliate links clearly. The privacy policy already mentions them.
-* **Subscription:** for example unlimited downloads, company comparisons, a watchlist or alerts. This needs user accounts and payments (for example Stripe). Ask Claude to build it once traffic justifies it.
+* **Premium extras:** Premium already gives unlimited downloads (step 6b). Company comparisons, a watchlist or alerts could be added to it later.
 * **Section 4:** a portfolio tracker, a company comparison tool or a community. The home page already teases it.
 
 ---
@@ -67,6 +92,7 @@ AdSense approves sites that have original, useful content. The lessons and calcu
 | Test live company data | The build environment blocks financial data websites, so live data was tested with sample responses in the providers' documented formats | Step 1 (local) or Step 4 (online): try several tickers and report anything odd |
 | Data provider account and key | Needs your identity and payment | Step 2 |
 | Domain, hosting account | Needs your identity and payment | Steps 3–4 |
+| Stripe and Resend accounts | Need your identity, business and bank account | Step 6b |
 | AdSense approval | Only Google approves, and only for the site owner | Step 6 |
 | Legal review and business registration | Needs a professional and your details | Step 5 |
 

@@ -23,6 +23,10 @@
     <li><b>Searches</b> (ticker symbols) are sent to our server to fetch public company data from our data providers. We do not link them to you.</li>
     <li><b>Preferences and your portfolio</b> (in the portfolio tracker) are stored only in your own browser (local storage). They are never sent to us; only the ticker symbols are used to fetch current prices.</li>
     <li><b>Reviews</b>: if you write a review, the name (or nickname), rating and text you enter are stored and shown publicly on the Reviews page. We do not ask for your email. Ask us at the contact address to remove a review.</li>
+    <li><b>Downloads counter</b>: the number of free downloads you have used and your access code (if you paid) are stored in your own browser.</li>
+    <li><b>Payments</b>: if you buy downloads or Premium, Stripe processes the payment and gives us your name, email address, the plan you chose and its status.
+      We keep these to provide your access code, check your downloads and send you a thank-you email with an invitation to leave a review.
+      Legal basis: performance of the contract. Card details stay with Stripe. Accounting records are kept as long as the law requires.</li>
     <li><b>Technical logs</b> kept by our hosting provider (IP address, browser type, pages requested) for security and reliability, for a short period.</li>
   </ul>
   <h2>Advertising and cookies</h2>
@@ -36,7 +40,9 @@
   <p>Under the GDPR you may ask to access, correct or delete personal data we hold about you, object to processing, or complain to your data protection authority
     (in Romania: ANSPDCP). Contact us at the address above.</p>
   <h2>Third parties</h2>
-  <p>Company data is provided by third-party data providers (Financial Modeling Prep, the U.S. SEC's EDGAR system, Yahoo Finance). Your browser does not connect to them directly.</p>
+  <p>Company data is provided by third-party data providers (Financial Modeling Prep, the U.S. SEC's EDGAR system, Yahoo Finance). Your browser does not connect to them directly.
+    Payments are handled by <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Stripe</a>, and emails are sent through
+    <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">Resend</a>. The website is hosted by Netlify.</p>
   <script type="module">import { SITE } from '/js/config.js'; document.querySelectorAll('.contact-email').forEach((a) => { a.href = 'mailto:' + SITE.contactEmail; a.textContent = SITE.contactEmail; });</script>
 
 </main>

@@ -56,6 +56,7 @@ function footer() {
       <div><h4>Financial Rat</h4><ul>
         <li><a href="/analyze/">Analyze a company</a></li>
         <li><a href="/reviews.html">Reviews</a></li>
+        <li><a href="/premium.html">⭐ Premium</a></li>
         <li><a href="/about.html">About</a></li>
         <li><a href="/privacy.html">Privacy policy</a></li>
         <li><a href="/terms.html">Terms &amp; disclaimer</a></li>

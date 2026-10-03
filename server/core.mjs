@@ -11,6 +11,7 @@ import { secCompany, secSearch } from './providers/sec.mjs';
 import { yahooChart, yahooCompany, yahooFx, yahooProfile, yahooSearch } from './providers/yahoo.mjs';
 import { demoCompany, demoPrices } from './demo.mjs';
 import { handleReviews } from './reviews.mjs';
+import { handlePayments } from './payments.mjs';
 
 const SYMBOL_RE = /^[A-Za-z0-9.\-^=]{1,20}$/;
 const cache = new Map();
@@ -59,7 +60,7 @@ async function freeCompany(symbol, cfg) {
         Object.assign(p, {
           description: prof.description || p.description, sector: prof.sector || p.sector, industry: prof.industry || p.industry,
           country: prof.country || p.country, website: prof.website || p.website, employees: prof.employees || p.employees,
-          exchange: prof.exchange || p.exchange,
+          exchange: prof.exchange || p.exchange, beta: prof.beta ?? p.beta,
         });
       }
       p.currency = prof?.currency || chart?.meta.currency || 'USD';
@@ -155,6 +156,10 @@ export async function handleApi(url, env = process.env, req = {}) {
   const cfg = config(env);
   const route = url.pathname.replace(/\/+$/, '').split('/').pop();
   try {
+    if (['license', 'download', 'checkout', 'claim', 'stripe-webhook', 'plans'].includes(route)) {
+      const [status, body] = await handlePayments(route, { method: req.method || 'GET', url, body: req.body, headers: req.headers || {}, env });
+      return json(status, body);
+    }
     if (route === 'reviews') {
       const [status, body] = await handleReviews({ method: req.method || 'GET', url, body: req.body, ip: req.ip, env });
       return json(status, body);

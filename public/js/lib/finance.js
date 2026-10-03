@@ -468,3 +468,36 @@ export function portfolioSummary(transactions, quotes = {}, fx = {}) {
   totals.dayChangePct = totals.value - totals.dayChange > 0 ? totals.dayChange / (totals.value - totals.dayChange) : null;
   return { rows, totals };
 }
+
+// Approximate 10-year government bond yields (risk-free rates) by currency, 2025.
+// They change over time: the DCF lets visitors edit the value.
+export const RISK_FREE = { USD: 4.2, EUR: 2.7, GBP: 4.5, CHF: 0.6, JPY: 1.5, CAD: 3.3, AUD: 4.3, DKK: 2.4, SEK: 2.4, NOK: 3.9, RON: 7.0, PLN: 5.5, HKD: 3.5, CNY: 1.8, INR: 6.4, KRW: 2.8, TWD: 1.6, BRL: 13.0 };
+export const MARKET_RISK_PREMIUM = 4.5;
+
+/**
+ * Weighted average cost of capital from the company's own numbers (CAPM for equity):
+ *   cost of equity = risk-free + beta × market risk premium
+ *   cost of debt   = interest expense ÷ total debt, after tax
+ *   WACC = E/V × cost of equity + D/V × cost of debt after tax   (market value of equity, book debt)
+ * All rates in percent. Missing inputs fall back to neutral textbook values.
+ */
+export function estimateWacc(company, val, overrides = {}) {
+  const inc = company.income[company.income.length - 1] || {};
+  const bal = company.balance[company.balance.length - 1] || {};
+  const cur = company.reportingCurrency || company.profile?.currency || 'USD';
+  const rf = overrides.rf ?? RISK_FREE[cur] ?? RISK_FREE.USD;
+  const betaRaw = company.profile?.beta;
+  const beta = overrides.beta ?? (isNum(betaRaw) && betaRaw > 0 ? Math.min(Math.max(betaRaw, 0.3), 2.5) : 1);
+  const mrp = overrides.mrp ?? MARKET_RISK_PREMIUM;
+  const ke = rf + beta * mrp;
+  const debt = isNum(bal.totalDebt) ? bal.totalDebt : 0;
+  const interest = isNum(inc.interestExpense) ? Math.abs(inc.interestExpense) : null;
+  const kdPre = debt > 0 && interest ? Math.min(Math.max((interest / debt) * 100, rf * 0.5), rf + 8) : rf + 1.5;
+  const taxRaw = safeDiv(inc.incomeTax, inc.pretaxIncome);
+  const tax = isNum(taxRaw) && taxRaw > 0 && taxRaw < 0.5 ? taxRaw * 100 : 21;
+  const kd = kdPre * (1 - tax / 100);
+  const equity = isNum(val?.marketCap) && val.marketCap > 0 ? val.marketCap : null;
+  const wE = equity ? equity / (equity + debt) : debt > 0 ? 0.7 : 1;
+  const wacc = wE * ke + (1 - wE) * kd;
+  return { rf, beta, betaFromData: isNum(betaRaw), mrp, ke, kdPre, tax, kd, wE, wD: 1 - wE, wacc };
+}

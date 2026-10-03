@@ -24,8 +24,8 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (url.pathname.startsWith('/api/')) {
     let body = '';
-    if (req.method === 'POST') for await (const chunk of req) { body += chunk; if (body.length > 20000) break; }
-    const out = await handleApi(url, process.env, { method: req.method, body, ip: req.socket.remoteAddress });
+    if (req.method === 'POST') for await (const chunk of req) { body += chunk; if (body.length > 1e6) break; }
+    const out = await handleApi(url, process.env, { method: req.method, body, ip: req.socket.remoteAddress, headers: req.headers });
     res.writeHead(out.status, out.headers);
     return res.end(out.body);
   }
