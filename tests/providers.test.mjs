@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fmpCompany, mapSegments } from '../server/providers/fmp.mjs';
 import { parseCompanyFacts } from '../server/providers/sec.mjs';
-import { parseChart, parseTimeseries, parseSearch, parseQuoteSummary } from '../server/providers/yahoo.mjs';
+import { parseChart, parseTimeseries, parseSearch, parseQuoteSummary, parseRecommendations } from '../server/providers/yahoo.mjs';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { handleApi } from '../server/core.mjs';
@@ -213,4 +213,56 @@ test('dividend history: yearly totals, increase streak, partial current year', a
   assert.equal(h.increaseStreak, 11);
   assert.ok(h.rows[h.rows.length - 1].partial);
   assert.ok(Math.abs(h.cagr10 - 0.1) < 1e-9);
+});
+
+test('Yahoo key statistics for the competitor table', () => {
+  const p = parseQuoteSummary({ quoteSummary: { result: [{
+    price: { longName: 'Test', currency: 'USD', quoteType: 'EQUITY' },
+    summaryDetail: { trailingPE: { raw: 25.5 }, forwardPE: { raw: -3 }, priceToSalesTrailing12Months: { raw: 4 }, dividendYield: {}, trailingAnnualDividendYield: { raw: 0 } },
+    defaultKeyStatistics: { enterpriseToEbitda: { raw: 18 }, enterpriseToRevenue: { raw: 4.2 }, priceToBook: { raw: -2 } },
+    financialData: { profitMargins: { raw: 0.21 }, operatingMargins: { raw: 0.3 }, returnOnEquity: { raw: 1.5 }, debtToEquity: { raw: 151.9 } },
+  }] } });
+  assert.equal(p.quoteType, 'EQUITY');
+  assert.equal(p.stats.pe, 25.5);
+  assert.equal(p.stats.forwardPe, null); // negative expected earnings: not meaningful
+  assert.equal(p.stats.pb, null); // negative equity
+  assert.equal(p.stats.evEbitda, 18);
+  assert.equal(p.stats.netMargin, 0.21);
+  assert.ok(Math.abs(p.stats.debtToEquity - 1.519) < 1e-9); // Yahoo gives percent
+  assert.equal(p.stats.dividendYield, 0); // pays no dividend
+  assert.deepEqual(parseRecommendations({ finance: { result: [{ symbol: 'AAPL', recommendedSymbols: [{ symbol: 'MSFT', score: 0.3 }, { symbol: 'GOOG' }] }] } }), ['MSFT', 'GOOG']);
+});
+
+test('API peers: hand-picked list or similar companies in the same sector', async () => {
+  const summary = (name, sector, pe, quoteType = 'EQUITY') => ({ quoteSummary: { result: [{
+    price: { longName: name, currency: 'USD', quoteType, marketCap: { raw: 1e9 } }, assetProfile: { sector },
+    summaryDetail: { trailingPE: { raw: pe } }, defaultKeyStatistics: {}, financialData: {} }] } });
+  const companies = {
+    ZZQA: summary('Zed A', 'Energy', 10), ZZQB: summary('Zed B', 'Energy', 12), ZZQC: summary('Zed C', 'Energy', 14),
+    ZZQT: summary('Tech Co', 'Technology', 40), ZZQE: summary('An ETF', 'Energy', 9, 'ETF'),
+    KO: summary('Coca-Cola', 'Consumer Defensive', 24), PEP: summary('PepsiCo', 'Consumer Defensive', 20), KDP: summary('Keurig Dr Pepper', 'Consumer Defensive', 22),
+  };
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    const ok = (body) => ({ ok: true, status: 200, json: async () => body, text: async () => '', headers: { get: () => '' } });
+    if (u.includes('recommendationsbysymbol/ZZQA')) return ok({ finance: { result: [{ recommendedSymbols: ['ZZQT', 'ZZQB', 'ZZQE', 'ZZQC', 'NOPE'].map((symbol) => ({ symbol })) }] } });
+    const m = u.match(/quoteSummary\/([^?]+)/);
+    if (m && companies[decodeURIComponent(m[1])]) return ok(companies[decodeURIComponent(m[1])]);
+    return { ok: false, status: 404, json: async () => ({}), text: async () => '', headers: { get: () => '' } };
+  };
+  try {
+    const similar = JSON.parse((await handleApi(new URL('http://x/api/peers?symbol=zzqa'), {})).body);
+    assert.equal(similar.how, 'yahoo');
+    assert.equal(similar.self.name, 'Zed A');
+    assert.deepEqual(similar.peers.map((p) => p.symbol), ['ZZQB', 'ZZQC']); // other sector, ETF and unknown symbol left out
+    assert.equal(similar.peers[0].pe, 12);
+    const curated = JSON.parse((await handleApi(new URL('http://x/api/peers?symbol=KO'), {})).body);
+    assert.equal(curated.how, 'curated');
+    assert.deepEqual(curated.peers.map((p) => p.symbol), ['PEP', 'KDP']); // the rest failed to load and are skipped
+    const demo = JSON.parse((await handleApi(new URL('http://x/api/peers?symbol=DEMO'), {})).body);
+    assert.deepEqual(demo.peers, []);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

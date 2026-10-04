@@ -3,14 +3,16 @@
 //   GET /api/search?q=apple      -> { results: [{ symbol, name, exchange }] }
 //   GET /api/company?symbol=AAPL -> normalized company (see normalize.mjs)
 //   GET /api/prices?symbol=AAPL  -> { dates: [...], close: [...] } daily since listing
+//   GET /api/peers?symbol=AAPL   -> { self, peers: [...], how } ratios of the company and its competitors
 //
 // Data source: Financial Modeling Prep when FMP_API_KEY is set; otherwise free mode:
 // SEC EDGAR statements for US filers, Yahoo Finance for prices, profiles and non-US companies. The symbol DEMO always returns a fictional sample company.
-import { fmpCompany, fmpPrices, fmpSearch } from './providers/fmp.mjs';
+import { fmpCompany, fmpPeers, fmpPrices, fmpSearch } from './providers/fmp.mjs';
 import { secCompany, secSearch } from './providers/sec.mjs';
-import { yahooChart, yahooCompany, yahooFx, yahooProfile, yahooSearch } from './providers/yahoo.mjs';
+import { yahooChart, yahooCompany, yahooFx, yahooProfile, yahooRecommendations, yahooSearch } from './providers/yahoo.mjs';
 import { demoCompany, demoPrices } from './demo.mjs';
 import { SITE } from '../public/js/config.js';
+import { peersFor } from '../public/js/profiles.js';
 import { handleReviews } from './reviews.mjs';
 
 const SYMBOL_RE = /^[A-Za-z0-9.\-^=]{1,20}$/;
@@ -104,6 +106,39 @@ async function getPrices(symbol, cfg) {
   return { source: 'Yahoo Finance', dates: c.dates, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume, dividends: c.dividends };
 }
 
+const PEER_COUNT = 6;
+
+/**
+ * The company and up to 6 competitors with the same last-12-months ratios from Yahoo, so every row is
+ * measured the same way. Competitors come from the hand-picked list in profiles.js, else from FMP
+ * (when a key is set), else from Yahoo's similar companies kept to the same sector.
+ */
+async function getPeers(symbol, cfg) {
+  if (symbol === 'DEMO') return { symbol, self: null, peers: [], how: 'demo' };
+  let candidates = peersFor(symbol), how = 'curated';
+  if (!candidates) {
+    how = 'fmp';
+    candidates = cfg.fmpKey ? await fmpPeers(symbol, cfg.fmpKey).catch(() => []) : [];
+    if (!candidates.length) {
+      how = 'yahoo';
+      candidates = await yahooRecommendations(symbol).catch(() => []);
+    }
+  }
+  candidates = [...new Set(candidates.map((x) => x.toUpperCase()))].filter((x) => x !== symbol && SYMBOL_RE.test(x)).slice(0, 10);
+  const stats = (sym) => cached(`stats:${sym}`, () => yahooProfile(sym)).then((p) => (p?.stats ? {
+    symbol: sym, name: p.name || sym, exchange: p.exchange, currency: p.currency, marketCap: p.marketCap,
+    sector: p.sector, industry: p.industry, quoteType: p.quoteType, ...p.stats,
+  } : null)).catch(() => null);
+  const [self, ...found] = await Promise.all([symbol, ...candidates].map(stats));
+  let peers = found.filter((p) => p && (!p.quoteType || p.quoteType === 'EQUITY'));
+  if (how !== 'curated' && self?.sector) {
+    // Similar-company lists mix in popular names from other sectors: keep the same sector when enough remain.
+    const same = peers.filter((p) => p.sector === self.sector);
+    if (same.length >= 2) peers = same;
+  }
+  return { symbol, self, peers: peers.slice(0, PEER_COUNT), how, source: 'Yahoo Finance', asOf: new Date().toISOString() };
+}
+
 async function search(q, cfg) {
   const [primary, world] = await Promise.all([
     (cfg.fmpKey ? fmpSearch(q, cfg.fmpKey) : secSearch(q, cfg.secUA)).catch(() => []),
@@ -166,10 +201,10 @@ export async function handleApi(url, env = process.env, req = {}) {
       if (!q || q.length > 40) return json(400, { error: 'Type a ticker or company name.' });
       return json(200, await cached(`s:${q.toLowerCase()}`, () => search(q, cfg)), 86400);
     }
-    if (route === 'company' || route === 'prices') {
+    if (route === 'company' || route === 'prices' || route === 'peers') {
       const symbol = (url.searchParams.get('symbol') || '').trim().toUpperCase();
       if (!SYMBOL_RE.test(symbol)) return json(400, { error: 'That does not look like a ticker symbol (for example AAPL or MSFT).' });
-      const fn = route === 'company' ? getCompany : getPrices;
+      const fn = { company: getCompany, prices: getPrices, peers: getPeers }[route];
       return json(200, await cached(`${route}:${symbol}`, () => fn(symbol, cfg)), 3600);
     }
     if (route === 'quote') {

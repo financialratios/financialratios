@@ -517,6 +517,11 @@ textarea:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 4p
 .rt .grp-label { display: inline-block; position: sticky; left: 12px; }
 .ratio-table tr.grp td { position: static; }
 .ratio-table .rt.compact td:first-child { white-space: normal; min-width: 170px; max-width: 200px; line-height: 1.25; }
+.peer-table .rt.compact td:first-child { white-space: normal; min-width: 170px; max-width: 220px; line-height: 1.25; }
+.peer-table thead th { white-space: nowrap; }
+.peer-table tr.me td { background: var(--brand-soft); font-weight: 700; }
+.peer-table tr.total td { background: var(--surface-2); }
+@media (max-width: 600px) { .peer-table .rt.compact td:first-child { min-width: 120px; max-width: 140px; } }
 .ratio-table .rt.compact td, .ratio-table .rt.compact th { padding: 7px 7px; }
 
 /* ---------- Portfolio tracker ---------- */

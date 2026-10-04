@@ -210,6 +210,44 @@ export function profileFor(symbol) {
   return PROFILES[ALIASES[s] || s] || null;
 }
 
+// Main listed competitors for the comparison table on the analysis page. Companies not listed here
+// get similar companies suggested by the data provider instead. Use Yahoo Finance ticker symbols.
+export const PEERS = {
+  AAPL: ['MSFT', 'GOOGL', 'SONY', 'DELL', 'HPQ', '005930.KS'],
+  MSFT: ['AAPL', 'GOOGL', 'AMZN', 'ORCL', 'CRM', 'SAP'],
+  NFLX: ['DIS', 'WBD', 'CMCSA', 'ROKU', 'SPOT', 'AMZN'],
+  GOOGL: ['META', 'MSFT', 'AMZN', 'AAPL', 'BIDU', 'SNAP'],
+  AMZN: ['WMT', 'COST', 'BABA', 'EBAY', 'MSFT', 'GOOGL'],
+  META: ['GOOGL', 'SNAP', 'PINS', 'RDDT', 'MSFT', 'TTD'],
+  TSLA: ['TM', 'GM', 'F', 'STLA', 'RIVN', 'BYDDY'],
+  NVDA: ['AMD', 'AVGO', 'INTC', 'QCOM', 'TSM', 'ARM'],
+  KO: ['PEP', 'KDP', 'MNST', 'NESN.SW'],
+  PG: ['CL', 'KMB', 'UL', 'CLX', 'CHD'],
+  MCD: ['YUM', 'SBUX', 'QSR', 'CMG', 'DPZ'],
+  DIS: ['NFLX', 'CMCSA', 'WBD', 'SONY'],
+  WMT: ['COST', 'TGT', 'AMZN', 'KR', 'DG'],
+  JPM: ['BAC', 'C', 'WFC', 'GS', 'MS'],
+  CAT: ['DE', 'CNH', 'PCAR', 'CMI'],
+  XOM: ['CVX', 'SHEL', 'BP', 'TTE', 'COP'],
+  V: ['MA', 'AXP', 'PYPL', 'COF'],
+  JNJ: ['PFE', 'MRK', 'ABBV', 'LLY', 'NVS'],
+  ASML: ['AMAT', 'LRCX', 'KLAC', '8035.T'],
+  TM: ['HMC', 'GM', 'F', 'STLA', 'TSLA', 'VOW3.DE'],
+  SAP: ['ORCL', 'MSFT', 'CRM', 'ADBE', 'WDAY'],
+  NVO: ['LLY', 'AZN', 'NVS', 'SNY', 'PFE'],
+  NKE: ['ADS.DE', 'PUM.DE', 'LULU', 'DECK'],
+  'MC.PA': ['RMS.PA', 'KER.PA', 'CFR.SW', 'MONC.MI'],
+  'NESN.SW': ['UL', 'BN.PA', 'MDLZ', 'KHC', 'GIS'],
+  '0700.HK': ['BABA', 'NTES', 'BIDU', 'META'],
+  'H2O.RO': ['SNG.RO', 'SNN.RO', 'TEL.RO', 'EL.RO', 'TGN.RO'],
+  'TLV.RO': ['BRD.RO', 'EBS.VI', 'OTP.BD'],
+};
+
+export function peersFor(symbol) {
+  const s = String(symbol || '').toUpperCase();
+  return PEERS[ALIASES[s] || s] || null;
+}
+
 // Suggestions shown under the search box.
 export const SUGGESTIONS = [
   ['🇺🇸 US giants', [['AAPL', 'Apple'], ['MSFT', 'Microsoft'], ['NVDA', 'Nvidia'], ['AMZN', 'Amazon'], ['GOOGL', 'Alphabet (Google)'], ['META', 'Meta'], ['NFLX', 'Netflix'], ['TSLA', 'Tesla']]],

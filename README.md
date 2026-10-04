@@ -8,7 +8,7 @@ Financial Rat puts learning, calculating and analyzing companies in one simple w
 |---|---|
 | 📘 **Learn** (`/learn/`) | Branches of finance, primary & secondary markets, stocks, bonds, gold & silver, funds & interest rates; the 3 statements line by line (arrow next to each number); ratios; multiples; a full DCF (CAPM, cost of debt, WACC, terminal value) with arrows around each formula; 7 industry case studies and the economic cycle |
 | 🧮 **Calculators** (`/calculators/`) | Compound interest, mortgage, loan, investment return, savings goal, inflation, dividends, rule of 72, stock value, loss recovery. Each one shows its formula and sources |
-| 🔍 **Analyze** (`/analyze/`) | Search US and foreign companies (with popular suggestions); business model, famous products with pictures, what sets the company apart, revenue sources (donut + comparison chart); 10 years of statements, ratios, valuation history, an adjustable DCF (default growth = 10-year history), daily candles since IPO, and an Excel/PDF download |
+| 🔍 **Analyze** (`/analyze/`) | Search US and foreign companies (with popular suggestions); business model, famous products with pictures, what sets the company apart, revenue sources (donut + comparison chart); 10 years of statements, ratios, valuation history, a comparison with competitors (P/E, EV/EBITDA, P/S, P/B, margins, ROE, debt), an adjustable DCF (default growth = 10-year history), daily candles since IPO, and an Excel/PDF download |
 
 ## Run it on your computer
 
