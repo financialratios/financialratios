@@ -13,6 +13,6 @@ export const SITE = {
   adSlots: {
     top: { id: '6411072002', format: 'fluid', layoutKey: '-fb+5w+4e-db+86' },
     middle: { id: '6411072002', format: 'fluid', layoutKey: '-fb+5w+4e-db+86' },
-    bottom: { id: '6411072002', format: 'fluid', layoutKey: '-fb+5w+4e-db+86' },
+    bottom: { id: '7084101835', format: 'autorelaxed' }, // Multiplex unit
   },
 };
