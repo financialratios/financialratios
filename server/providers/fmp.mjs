@@ -164,3 +164,9 @@ export async function fmpSearch(query, key, fetchImpl = fetch) {
     .slice(0, 10)
     .map((r) => ({ symbol: r.symbol, name: r.name, exchange: r.exchange || r.exchangeShortName || '' }));
 }
+
+/** Companies in the same sector and of similar size, as chosen by FMP. */
+export async function fmpPeers(symbol, key, fetchImpl = fetch) {
+  const rows = await get('stock-peers', { symbol }, key, fetchImpl);
+  return (Array.isArray(rows) ? rows : []).map((r) => r.symbol).filter(Boolean);
+}

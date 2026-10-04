@@ -4,6 +4,7 @@
 //  - company profile (description, sector, employees) and market value
 //  - annual statements for companies outside the US SEC system (usually the last 4 years)
 //  - exchange rates when a company reports in one currency but trades in another
+//  - competitors' ratios (last 12 months) and similar companies for the comparison table
 // These endpoints are unofficial: Yahoo can change or rate-limit them, so every caller
 // treats a failure as "not available" instead of breaking the page.
 import { completeRows } from '../normalize.mjs';
@@ -25,9 +26,15 @@ async function getJson(url, fetchImpl, headers = {}) {
 }
 
 // ---------- session "crumb" needed by some endpoints ----------
-let session = null;
-async function getSession(fetchImpl) {
-  if (session && Date.now() - session.at < 3600e3) return session;
+let session = null, pending = null;
+function getSession(fetchImpl) {
+  if (session && Date.now() - session.at < 3600e3) return Promise.resolve(session);
+  // Requests made at the same moment (e.g. the competitor table) share one new session.
+  pending ||= newSession(fetchImpl).finally(() => { pending = null; });
+  return pending;
+}
+
+async function newSession(fetchImpl) {
   const r1 = await fetchImpl('https://fc.yahoo.com', { headers: { 'User-Agent': UA }, redirect: 'manual' }).catch(() => null);
   const raw = r1?.headers?.getSetCookie?.() || [r1?.headers?.get?.('set-cookie') || ''];
   const cookie = raw.filter(Boolean).map((c) => c.split(';')[0]).join('; ');
@@ -138,12 +145,48 @@ export function parseQuoteSummary(json) {
     employees: ap.fullTimeEmployees || null,
     financialCurrency: r.financialData?.financialCurrency || null,
     beta: raw(r.defaultKeyStatistics?.beta) ?? raw(r.summaryDetail?.beta) ?? null,
+    quoteType: pr.quoteType || null,
+    stats: parseKeyStats(r),
+  };
+}
+
+/** Ratios over the last 12 months, for comparing a company with its competitors. Not meaningful values are null. */
+function parseKeyStats(r) {
+  const sd = r.summaryDetail || {}, ks = r.defaultKeyStatistics || {}, fd = r.financialData || {};
+  const val = (v) => {
+    const x = v && typeof v === 'object' ? v.raw : v;
+    return typeof x === 'number' && Number.isFinite(x) ? x : null;
+  };
+  // Multiples of a negative profit, EBITDA or equity are not meaningful.
+  const pos = (v) => (val(v) > 0 ? val(v) : null);
+  return {
+    pe: pos(sd.trailingPE),
+    forwardPe: pos(sd.forwardPE) ?? pos(ks.forwardPE),
+    evEbitda: pos(ks.enterpriseToEbitda),
+    evSales: pos(ks.enterpriseToRevenue),
+    ps: pos(sd.priceToSalesTrailing12Months),
+    pb: pos(ks.priceToBook),
+    netMargin: val(fd.profitMargins),
+    operatingMargin: val(fd.operatingMargins),
+    roe: val(fd.returnOnEquity),
+    debtToEquity: val(fd.debtToEquity) != null ? val(fd.debtToEquity) / 100 : null, // Yahoo gives it in percent
+    dividendYield: val(sd.dividendYield) ?? val(sd.trailingAnnualDividendYield),
   };
 }
 
 export async function yahooProfile(symbol, fetchImpl = fetch) {
   const json = await withCrumb(`${Q2}/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=assetProfile,price,financialData,defaultKeyStatistics,summaryDetail`, fetchImpl);
   return parseQuoteSummary(json);
+}
+
+// ---------- similar companies ----------
+export function parseRecommendations(json) {
+  return (json?.finance?.result?.[0]?.recommendedSymbols || []).map((r) => r.symbol).filter(Boolean);
+}
+
+/** Companies investors often look at alongside this one (Yahoo's "people also watch"). */
+export async function yahooRecommendations(symbol, fetchImpl = fetch) {
+  return parseRecommendations(await getJson(`${Q2}/v6/finance/recommendationsbysymbol/${encodeURIComponent(symbol)}`, fetchImpl));
 }
 
 // ---------- annual statements (companies outside the SEC) ----------

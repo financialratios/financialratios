@@ -93,6 +93,7 @@ async function load(raw) {
   document.title = `${symbol} — company analysis — Financial Rat`;
   result.innerHTML = `<div class="spinner" role="status" aria-label="Loading"></div><p class="center muted">Collecting 10 years of data for <b>${escapeHtml(symbol)}</b>…</p>`;
   const pricesPromise = api(`/api/prices?symbol=${encodeURIComponent(symbol)}`).catch((e) => ({ error: e.message }));
+  const peersPromise = api(`/api/peers?symbol=${encodeURIComponent(symbol)}`).catch((e) => ({ error: e.message }));
   let company;
   try {
     company = await api(`/api/company?symbol=${encodeURIComponent(symbol)}`);
@@ -108,6 +109,7 @@ async function load(raw) {
   Object.assign(state, { company, prices: null });
   render(company);
   track('analyze_company', { symbol: company.profile.symbol, company_name: company.profile.name });
+  peersPromise.then((peers) => { if (state.company === company) renderPeers(peers); });
   const prices = await pricesPromise;
   if (state.company !== company) return; // user searched something else meanwhile
   state.prices = prices.error ? null : prices;
@@ -166,7 +168,7 @@ function render(c) {
 
   <nav class="tabs" aria-label="Analysis sections">
     <a href="#price" class="active">Price chart</a><a href="#overview">Overview</a><a href="#business">Business</a><a href="#pershare">EPS &amp; dividends</a>
-    <a href="#statements">Statements</a><a href="#ratios">Ratios</a><a href="#valuation">Valuation</a><a href="#dcf">DCF model</a><a href="#whatif">What if?</a>
+    <a href="#statements">Statements</a><a href="#ratios">Ratios</a><a href="#valuation">Valuation</a><a href="#peers">Competitors</a><a href="#dcf">DCF model</a><a href="#whatif">What if?</a>
   </nav>
 
   <section class="az-section" id="price">
@@ -264,6 +266,12 @@ function render(c) {
     </div>
     <div class="card"><h3 style="margin-top:0">Multiples at each past fiscal year-end</h3>
       <div class="chart-box short"><canvas id="c-multiples"></canvas></div><div id="multiples-text"></div></div></div>
+  </section>
+
+  <section class="az-section" id="peers">
+    <h2>Compared with competitors</h2>
+    <p class="muted small" id="peers-intro">The same ratios for ${escapeHtml(p.name)} and other listed companies in its market. Click a name to analyze that company.</p>
+    <div id="peers-box"><div class="spinner"></div><p class="center muted">Loading competitors…</p></div>
   </section>
 
   <section class="az-section" id="dcf">
@@ -372,6 +380,85 @@ function wireTabs() {
     });
   }, { rootMargin: '-45% 0px -50% 0px' });
   $$('.az-section').forEach((s) => obs.observe(s));
+}
+
+// ---------- Competitors ----------
+const PEER_COLS = [
+  ['marketCap', 'Market value', 'cap', 'Share price × number of shares, in the currency the shares trade in.'],
+  ['pe', 'P/E', 'x', 'Share price ÷ earnings per share over the last 12 months: what investors pay for each 1 of yearly profit.'],
+  ['forwardPe', 'Forward P/E', 'x', "Share price ÷ analysts' expected earnings per share for the coming year."],
+  ['evEbitda', 'EV / EBITDA', 'x', 'Enterprise value (market value + debt − cash) ÷ EBITDA: the price of the whole business, ignoring how it is financed.'],
+  ['ps', 'P/S', 'x', 'Market value ÷ revenue over the last 12 months.'],
+  ['pb', 'P/B', 'x', 'Market value ÷ book value (equity on the balance sheet).'],
+  ['netMargin', 'Net margin', 'pct', 'Net profit ÷ revenue: how much of each 100 of sales is left as profit.'],
+  ['roe', 'ROE', 'pct', "Return on equity: net profit ÷ shareholders' equity."],
+  ['debtToEquity', 'Debt / equity', 'x2', "Total debt ÷ shareholders' equity."],
+  ['dividendYield', 'Dividend yield', 'pct2', 'Dividends per share over a year ÷ share price.'],
+];
+
+function median(values) {
+  const v = values.filter(isNum).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const m = Math.floor(v.length / 2);
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+}
+
+function peerCell(row, [key, , fmt]) {
+  const v = row[key];
+  if (!isNum(v)) return '<span class="na" title="Not available, or not meaningful (e.g. a P/E when the company is losing money)">—</span>';
+  if (fmt === 'cap') return compact(v, row.currency);
+  return fmt === 'pct' ? pct(v) : fmt === 'pct2' ? pct(v, 2) : fmt === 'x2' ? times(v, 2) : times(v);
+}
+
+/** One neutral sentence comparing the company with the competitors' median. */
+function peerFact(name, self, med, key, label, fmt, more, less) {
+  if (!isNum(self[key]) || !isNum(med[key]) || med[key] === 0) return '';
+  const show = (v) => (fmt === 'pct' ? pct(v) : times(v));
+  const diff = self[key] / med[key] - 1;
+  const side = Math.abs(diff) < 0.1 ? 'close to' : diff > 0 ? 'above' : 'below';
+  const meaning = side === 'close to' ? '' : ` ${side === 'above' ? more : less}`;
+  return arrow(`<b>${label}</b> of ${show(self[key])} for ${escapeHtml(name)}, against a median of ${show(med[key])} for its competitors: ${side} the typical competitor.${meaning}`);
+}
+
+function renderPeers(data) {
+  const box = $('#peers-box');
+  if (!box) return;
+  const c = state.company;
+  if (data.error || data.how === 'demo' || !data.peers?.length) {
+    box.innerHTML = `<div class="notice">${data.how === 'demo' ? 'The sample company has no real competitors to compare with. Search a real ticker to see this table.'
+      : data.error ? 'Competitor data could not be loaded right now. Please try again in a few minutes.'
+        : `We could not find comparable listed companies for ${escapeHtml(c.profile.name)}.`}</div>`;
+    return;
+  }
+  // When the data provider has no ratios for the company itself, use the latest fiscal year from this page.
+  const last = state.ratios[state.ratios.length - 1] || {};
+  const self = data.self || {
+    symbol: c.profile.symbol, name: c.profile.name, currency: state.pcur, marketCap: state.val.marketCap, pe: state.val.pe, evEbitda: state.val.evEbitda,
+    ps: state.val.ps, pb: state.val.pb, netMargin: last.netMargin, roe: last.roe, debtToEquity: last.debtToEquity, dividendYield: state.val.dividendYield,
+  };
+  const med = Object.fromEntries(PEER_COLS.map(([k]) => [k, median(data.peers.map((r) => r[k]))]));
+  const nameCell = (r, me) => `<td><span class="rname">${me ? escapeHtml(r.name) : `<a href="?t=${encodeURIComponent(r.symbol)}">${escapeHtml(r.name)}</a>`}</span><span class="rexp">${escapeHtml(r.symbol)}${r.industry ? ` · ${escapeHtml(r.industry)}` : ''}</span></td>`;
+  const row = (r, me) => `<tr class="${me ? 'me' : ''}">${nameCell(r, me)}${PEER_COLS.map((col) => `<td>${peerCell(r, col)}</td>`).join('')}</tr>`;
+  const intro = { curated: `Main listed competitors of ${escapeHtml(c.profile.name)}, chosen by Financial Rat.`,
+    fmp: 'Companies in the same sector and of similar size, as selected by Financial Modeling Prep.',
+    yahoo: `Companies in the same market that investors often look at alongside ${escapeHtml(c.profile.name)}.` }[data.how] || '';
+  $('#peers-intro').innerHTML = `${intro} The same ratios for every company; click a name to analyze it.`;
+  const name = self.name || c.profile.name;
+  const facts = [
+    peerFact(name, self, med, 'pe', 'P/E', 'x', 'Investors pay more for each 1 of its profit, which often reflects expectations of faster growth or steadier profits, or a share that has become expensive.', 'Investors pay less for each 1 of its profit, which can reflect slower expected growth, higher risk, or a share that is cheap.'),
+    peerFact(name, self, med, 'evEbitda', 'EV / EBITDA', 'x', 'The whole business, debt included, is priced higher relative to its operating earnings.', 'The whole business, debt included, is priced lower relative to its operating earnings.'),
+    peerFact(name, self, med, 'netMargin', 'Net margin', 'pct', 'It keeps more of each sale as profit than most competitors.', 'It keeps less of each sale as profit than most competitors.'),
+    peerFact(name, self, med, 'roe', 'Return on equity', 'pct', "It earns more profit on shareholders' money (high debt can also raise this ratio).", "It earns less profit on shareholders' money."),
+  ].join('');
+  box.innerHTML = `
+    <div class="table-wrap peer-table"><table class="rt compact"><thead><tr><th>Company</th>${PEER_COLS.map(([, label, , explain]) => `<th title="${escapeHtml(explain)}">${label} <span class="info" aria-label="${escapeHtml(explain)}">ⓘ</span></th>`).join('')}</tr></thead>
+    <tbody>${row(self, true)}${data.peers.map((r) => row(r, false)).join('')}
+    <tr class="total"><td><span class="rname">Competitors' median</span><span class="rexp">the middle value of the ${data.peers.length} competitors</span></td>${PEER_COLS.map((col) => `<td>${col[2] === 'cap' ? '' : peerCell(med, col)}</td>`).join('')}</tr>
+    </tbody></table></div>
+    ${facts ? `<div style="margin-top:16px">${facts}</div>` : ''}
+    <p class="small muted">Ratios from ${escapeHtml(data.source || 'Yahoo Finance')}, based on the last 12 months${data.self ? '' : ` (for ${escapeHtml(c.profile.name)}: latest fiscal year)`}, so they can differ a little from the Valuation section above, which uses the latest full fiscal year.
+      — means not available or not meaningful (for example a P/E when the company is losing money). Companies in other countries may follow different accounting rules. Comparing ratios is a starting point, not a recommendation.</p>`;
+  protect($('.peer-table'));
 }
 
 // ---------- Revenue sources donut ----------
