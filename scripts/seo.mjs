@@ -31,7 +31,7 @@ const lastChanged = (file) => {
   try { return execFileSync('git', ['log', '-1', '--format=%cs', '--', file], { encoding: 'utf8' }).trim() || null; } catch { return null; }
 };
 
-const org = { '@type': 'Organization', name: SITE.name, url: SITE.url, logo: `${SITE.url}/img/logo.svg` };
+const org = { '@type': 'Organization', name: SITE.name, url: SITE.url, logo: `${SITE.url}/img/logo.png` };
 
 function structuredData(path, title, description, h1, modified) {
   if (path === '/') {
