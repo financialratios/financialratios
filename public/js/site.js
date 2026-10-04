@@ -94,9 +94,11 @@ function setupAds() {
     document.head.appendChild(s);
   }
   slots.forEach((slot) => {
-    const id = SITE.adSlots[slot.dataset.slot || 'middle'];
+    const unit = SITE.adSlots[slot.dataset.slot || 'middle'];
+    const { id, format = 'auto', layoutKey } = typeof unit === 'string' ? { id: unit } : unit || {};
     if (!id) return; // Auto ads will place ads by themselves.
-    slot.innerHTML = `<ins class="adsbygoogle" style="display:block;width:100%" data-ad-client="${SITE.adsenseClient}" data-ad-slot="${id}" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
+    const extra = layoutKey ? ` data-ad-layout-key="${layoutKey}"` : format === 'auto' ? ' data-full-width-responsive="true"' : '';
+    slot.innerHTML = `<ins class="adsbygoogle" style="display:block;width:100%" data-ad-client="${SITE.adsenseClient}" data-ad-slot="${id}" data-ad-format="${format}"${extra}></ins>`;
     (window.adsbygoogle = window.adsbygoogle || []).push({});
   });
 }
