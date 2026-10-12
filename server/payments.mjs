@@ -5,7 +5,7 @@
 // Setup: create 3 products on Gumroad with "Generate a unique license key per sale" switched on,
 // then paste each product's link and product ID into `gumroad` in public/js/config.js.
 //
-//   pack10   one-time  €0.50         → 10 downloads (counted with Gumroad's license "uses")
+//   pack3    one-time  €1            → 3 downloads (counted with Gumroad's license "uses") + portfolio tracker
 //   monthly  membership €4.99 / month → Premium: unlimited downloads + portfolio tracker, while active
 //   yearly   membership €50 / year    → Premium: unlimited downloads + portfolio tracker, while active
 //
@@ -16,7 +16,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { SITE } from '../public/js/config.js';
 
 export const PLANS = {
-  pack10: { label: '10 extra downloads', price: '€0.50', credits: 10 },
+  pack3: { label: '3 extra downloads + portfolio tracker', price: '€1', credits: 3 },
   monthly: { label: 'Premium — monthly', price: '€4.99 / month' },
   yearly: { label: 'Premium — yearly', price: '€50 / year' },
 };
@@ -64,13 +64,14 @@ async function verifyKey(productId, key, { increment = false, fetchImpl = fetch 
 export function licenseStatus(plan, data) {
   const p = data?.purchase || {};
   const revoked = !!(p.refunded || p.chargebacked || (p.disputed && !p.dispute_won));
-  if (plan === 'pack10') {
-    const credits = revoked ? 0 : Math.max(0, PLANS.pack10.credits * (p.quantity || 1) - (data?.uses || 0));
-    return { valid: true, plan: 'pack', credits, unlimited: false };
+  if (plan === 'pack3') {
+    const credits = revoked ? 0 : Math.max(0, PLANS.pack3.credits * (p.quantity || 1) - (data?.uses || 0));
+    // The pack also unlocks the portfolio tracker, for good (unless refunded), even after its downloads are used.
+    return { valid: true, plan: 'pack', credits, unlimited: false, portfolio: !revoked };
   }
   // A cancelled membership keeps working until the paid period ends (Gumroad then sets ended_at).
   const active = !revoked && !p.subscription_ended_at && !p.subscription_failed_at;
-  return { valid: true, plan, unlimited: active, active };
+  return { valid: true, plan, unlimited: active, active, portfolio: active };
 }
 
 const cleanKey = (k) => String(k || '').trim().toUpperCase();
@@ -83,7 +84,7 @@ async function findLicense(env, ids, key, { increment = false, fetchImpl } = {})
   const order = known && ids[known.plan] ? [known.plan, ...Object.keys(ids).filter((p) => p !== known.plan)] : Object.keys(ids);
   for (const plan of order) {
     // Only pack downloads use up the key; checking a membership never does.
-    const data = await verifyKey(ids[plan], key, { increment: increment && plan === 'pack10', fetchImpl });
+    const data = await verifyKey(ids[plan], key, { increment: increment && plan === 'pack3', fetchImpl });
     if (data) {
       if (!known || known.plan !== plan) await store.set(`key:${key}`, { plan });
       return { plan, data };
@@ -95,8 +96,8 @@ async function findLicense(env, ids, key, { increment = false, fetchImpl } = {})
 // ---------- email ----------
 export function thankYouEmail({ name, plan, code, siteUrl }) {
   const first = (name || '').trim().split(/\s+/)[0] || 'there';
-  const what = plan === 'pack10' ? '10 extra downloads' : plan === 'yearly' ? 'Financial Rat Premium (yearly)' : 'Financial Rat Premium (monthly)';
-  const subject = `Thank you, ${first}! Your ${plan === 'pack10' ? 'downloads are' : 'Premium is'} ready`;
+  const what = plan === 'pack3' ? '3 extra downloads and the portfolio tracker' : plan === 'yearly' ? 'Financial Rat Premium (yearly)' : 'Financial Rat Premium (monthly)';
+  const subject = `Thank you, ${first}! Your ${plan === 'pack3' ? 'downloads are' : 'Premium is'} ready`;
   const html = `<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#0f1b2d;max-width:560px">
   <p>Dear ${first},</p>
   <p>Thank you for your trust in <b>Financial Rat</b>. Your purchase of <b>${what}</b> is active.</p>
@@ -148,9 +149,9 @@ export async function handlePayments(route, { method, url, body, env, fetchImpl 
     if (!found) return [404, { error: 'License key not found.' }];
     const st = licenseStatus(found.plan, found.data);
     if (st.unlimited) return [200, { ok: true, ...st }];
-    if (found.plan === 'pack10') {
-      // The use was just counted; it is allowed if it was within the 10 bought.
-      const allowed = PLANS.pack10.credits * (found.data.purchase?.quantity || 1);
+    if (found.plan === 'pack3') {
+      // The use was just counted; it is allowed if it was within the 3 bought.
+      const allowed = PLANS.pack3.credits * (found.data.purchase?.quantity || 1);
       if ((found.data.uses || 0) <= allowed && !found.data.purchase?.refunded) return [200, { ok: true, ...st }];
       return [402, { ok: false, ...st, credits: 0, error: 'No downloads left on this license key.' }];
     }

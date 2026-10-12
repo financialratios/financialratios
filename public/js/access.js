@@ -1,5 +1,5 @@
-// Paid plans: 3 free downloads per browser, then a 10-download pack or Premium.
-// Premium (monthly or yearly) = unlimited downloads + the portfolio tracker.
+// Paid plans: 3 free downloads per browser, then a 3-download pack or Premium.
+// Pack (one-time) = 3 more downloads + the portfolio tracker. Premium (monthly or yearly) = unlimited downloads + the portfolio tracker.
 // Purchases happen on Gumroad; the Gumroad license key is the buyer's access code, checked by the server.
 // While no Gumroad product is set up in config.js, downloads and the portfolio tracker are free and unlimited.
 import { escapeHtml } from './lib/format.js';
@@ -13,7 +13,7 @@ const K_USED = 'fr-free-downloads-used', K_CODE = 'fr-access-code';
 const get = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const set = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* storage blocked */ } };
 
-export const PRICES = { pack: 0.5, packDownloads: 10, monthly: 4.99, yearly: 50 };
+export const PRICES = { pack: 1, packDownloads: 3, monthly: 4.99, yearly: 50 };
 export const yearlyFull = PRICES.monthly * 12; // 59.88
 export const yearlySaving = yearlyFull - PRICES.yearly; // 9.88
 export const yearlySavingPct = Math.round((yearlySaving / yearlyFull) * 100); // 16%
@@ -23,6 +23,7 @@ let license = null; // { plan, credits, unlimited, ... } from the server
 export const freeLeft = () => Math.max(0, FREE_LIMIT - Number(get(K_USED) || 0));
 export const savedCode = () => get(K_CODE);
 export const isPremium = () => !!license?.unlimited;
+const hasPortfolio = () => !!license?.portfolio;
 
 export async function refreshLicense() {
   const code = savedCode();
@@ -48,7 +49,7 @@ export async function activateCode(code) {
 /** What an activated license unlocks, in words. */
 export const activatedText = (st) => (st.unlimited
   ? 'Premium: unlimited downloads and the portfolio tracker'
-  : `${st.credits} downloads available`);
+  : `${st.credits} downloads available${st.portfolio ? ' and the portfolio tracker' : ''}`);
 
 /** Text for the small counter under the download button. */
 export function quotaText() {
@@ -81,11 +82,11 @@ export async function requestDownload() {
   return false;
 }
 
-/** True when this visitor may use the portfolio tracker (Premium, or payments not switched on yet). */
+/** True when this visitor may use the portfolio tracker (any paid plan, or payments not switched on yet). */
 export async function canUsePortfolio() {
   if (!paymentsOn) return true;
   if (savedCode()) await refreshLicense();
-  return isPremium();
+  return hasPortfolio();
 }
 
 /** Open the Gumroad checkout for a plan in a new tab; the buyer comes back with a license key. */
@@ -99,16 +100,16 @@ export function startCheckout(plan) {
 const PREMIUM_PERKS = `<li>⭐ <b>Unlimited downloads</b> of financial statements (Excel and PDF)</li>
   <li>💼 <b>Portfolio tracker</b>: your holdings, gains and losses, allocation and history</li>`;
 
-/** The offers, shared by the paywall, the portfolio lock and the Premium page. `premiumOnly` hides the download pack. */
-export function offersHtml({ premiumOnly = false } = {}) {
-  const pack = premiumOnly ? '' : `<div class="offer">
+/** The offers, shared by the paywall, the portfolio lock and the Premium page. */
+export function offersHtml() {
+  const pack = `<div class="offer">
       <div class="offer-name">Download pack</div>
       <div class="offer-price">${eur(PRICES.pack)}</div>
       <div class="offer-sub">one-time payment</div>
-      <ul><li>✅ <b>${PRICES.packDownloads} more downloads</b> (Excel or PDF)</li><li>✅ Any company, worldwide</li><li>✅ No subscription</li></ul>
-      <button class="btn btn-ghost" data-plan="pack10" type="button">Buy ${PRICES.packDownloads} downloads</button>
+      <ul><li>✅ <b>${PRICES.packDownloads} more downloads</b> (Excel or PDF)</li><li>💼 <b>Portfolio tracker</b> included</li><li>✅ No subscription</li></ul>
+      <button class="btn btn-ghost" data-plan="pack3" type="button">Buy for ${eur(PRICES.pack)}</button>
     </div>`;
-  return `<div class="offers${premiumOnly ? ' two' : ''}">
+  return `<div class="offers">
     ${pack}
     <div class="offer">
       <div class="offer-name">Premium monthly</div>
