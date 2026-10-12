@@ -38,9 +38,14 @@ docs/LAUNCH-PLAN.md  ← step-by-step plan to go live
 * **Free mode (no key, the default):** US companies get up to 10 years of statements from the SEC (EDGAR); companies elsewhere get about 4 years from Yahoo Finance, which also supplies prices, candles, descriptions and search. Revenue breakdowns for ~25 popular companies are hand-collected in `public/js/profiles.js`; product pictures and short descriptions come from Wikipedia. Set `SEC_USER_AGENT` to `"Your Name your@email.com"`, as the SEC requires.
 * `DEMO` always shows a fictional sample company.
 
-## Downloads
-The Excel and PDF downloads are free and unlimited. Lines or years the data source does not provide are marked with `*`, and a note under each
-table explains why. The site earns money through Google AdSense (see `docs/LAUNCH-PLAN.md` → step 6).
+## Downloads and Premium
+Lines or years the data source does not provide are marked with `*` in the Excel and PDF downloads, and a note under each table explains why.
+
+Paid plans are sold through Gumroad. While no product is set in `gumroad` in `public/js/config.js`, downloads and the portfolio tracker are free
+and unlimited. Once set, each browser gets 3 free downloads, then visitors buy 10 downloads (€0.50), or Premium monthly (€4.99) or yearly
+(€50, a 16% discount on 12 × €4.99). Premium = unlimited downloads + the portfolio tracker. The Gumroad license key is the access code:
+`server/payments.mjs` checks it with Gumroad's license API (pack downloads are counted as license "uses"). An optional Gumroad ping sends a
+personal thank-you email through Resend. Setup: `docs/LAUNCH-PLAN.md` → step 6b. The site also earns money through Google AdSense (step 6).
 
 ## Reviews
 `/reviews.html` lets visitors post a name, star rating and text. They are stored in Netlify Blobs on Netlify (`.data/reviews.json` when running locally). See `docs/LAUNCH-PLAN.md` → "Managing reviews" to delete one.

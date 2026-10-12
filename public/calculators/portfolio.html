@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Portfolio tracker — Financial Rat</title>
-  <meta name="description" content="Free, private portfolio tracker: add your stocks, see their value today, your gains and losses, allocation and history. No account needed; your data stays in your browser.">
+  <meta name="description" content="Private portfolio tracker, part of Financial Rat Premium: add your stocks, see their value today, your gains and losses, allocation and history. Your data stays in your browser.">
   <link rel="icon" href="/favicon.ico" sizes="48x48">
   <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -15,13 +15,13 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Financial Rat">
   <meta property="og:title" content="Portfolio tracker — Financial Rat">
-  <meta property="og:description" content="Free, private portfolio tracker: add your stocks, see their value today, your gains and losses, allocation and history. No account needed; your data stays in your browser.">
+  <meta property="og:description" content="Private portfolio tracker, part of Financial Rat Premium: add your stocks, see their value today, your gains and losses, allocation and history. Your data stays in your browser.">
   <meta property="og:url" content="https://financialrat.com/calculators/portfolio.html">
   <meta property="og:image" content="https://financialrat.com/img/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"💼 Portfolio tracker","description":"Free, private portfolio tracker: add your stocks, see their value today, your gains and losses, allocation and history. No account needed; your data stays in your browser.","url":"https://financialrat.com/calculators/portfolio.html","applicationCategory":"FinanceApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"💼 Portfolio tracker · ⭐ Premium","description":"Private portfolio tracker, part of Financial Rat Premium: add your stocks, see their value today, your gains and losses, allocation and history. Your data stays in your browser.","url":"https://financialrat.com/calculators/portfolio.html","applicationCategory":"FinanceApplication","operatingSystem":"Any"}</script>
   <!-- /seo -->
   <link rel="stylesheet" href="/css/style.css">
   <!-- analytics -->
@@ -42,6 +42,14 @@
 <div id="site-header"></div>
 <main id="main" class="container" style="padding-top:28px">
   <p class="small"><a href="/calculators/">← All calculators</a></p>
+  <section class="pf-lock" id="pf-lock" hidden aria-labelledby="pf-lock-title">
+    <h1 id="pf-lock-title" style="margin-bottom:4px">💼 Portfolio tracker <span class="muted" style="font-size:1rem">· ⭐ Premium</span></h1>
+    <p class="muted" style="max-width:40em;margin:0 auto 22px">Add the shares you own and see what they are worth today, your gains and losses, your allocation and how the value changed over time.
+      The portfolio tracker is part of <a href="/premium.html">Premium</a>, together with unlimited downloads of financial statements.</p>
+    <div id="pf-offers"></div>
+    <div id="pf-code-box"></div>
+  </section>
+  <div id="pf-app">
   <div class="toolbar">
     <div><h1 style="margin-bottom:4px">💼 Portfolio tracker</h1>
       <p class="muted" style="margin:0">Add the shares you own and see what they are worth today. No account needed.</p></div>
@@ -93,6 +101,7 @@
     <label class="btn btn-ghost btn-sm" style="margin:0">📂 Restore a backup<input type="file" id="pf-import" accept=".csv,text/csv" hidden></label>
     <button class="btn btn-ghost btn-sm" id="pf-sample" type="button">🧪 Try an example portfolio</button>
     <button class="btn btn-ghost btn-sm" id="pf-clear" type="button">🗑️ Delete everything</button>
+  </div>
   </div>
 
   <div class="narrow" style="margin-top:32px">
