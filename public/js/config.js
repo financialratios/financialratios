@@ -8,7 +8,7 @@ export const SITE = {
   // and its product ID (Gumroad → the product → Content → License key → "Use your product ID…").
   // While these are empty, downloads and the portfolio tracker stay free and unlimited (no counter, no paywall).
   gumroad: {
-    pack10: { url: '', productId: '' }, // one-time €0.50 → 10 downloads
+    pack3: { url: '', productId: '' }, // one-time €1 → 3 downloads + portfolio tracker
     monthly: { url: '', productId: '' }, // membership €4.99 / month → Premium
     yearly: { url: '', productId: '' }, // membership €50 / year → Premium
   },

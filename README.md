@@ -42,7 +42,7 @@ docs/LAUNCH-PLAN.md  ← step-by-step plan to go live
 Lines or years the data source does not provide are marked with `*` in the Excel and PDF downloads, and a note under each table explains why.
 
 Paid plans are sold through Gumroad. While no product is set in `gumroad` in `public/js/config.js`, downloads and the portfolio tracker are free
-and unlimited. Once set, each browser gets 3 free downloads, then visitors buy 10 downloads (€0.50), or Premium monthly (€4.99) or yearly
+and unlimited. Once set, each browser gets 3 free downloads, then visitors buy 3 downloads + the portfolio tracker (€1, one-time), or Premium monthly (€4.99) or yearly
 (€50, a 16% discount on 12 × €4.99). Premium = unlimited downloads + the portfolio tracker. The Gumroad license key is the access code:
 `server/payments.mjs` checks it with Gumroad's license API (pack downloads are counted as license "uses"). An optional Gumroad ping sends a
 personal thank-you email through Resend. Setup: `docs/LAUNCH-PLAN.md` → step 6b. The site also earns money through Google AdSense (step 6).

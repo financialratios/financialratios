@@ -52,14 +52,13 @@ AdSense approves sites that have original, useful content. The lessons and calcu
 
 ## Step 6b: Switch on the paid plans (Gumroad, about 30 minutes)
 While no Gumroad product is filled in, downloads and the portfolio tracker are **free and unlimited** (no counter, no paywall).
-Once you fill them in, everyone gets 3 free downloads, then can buy 10 downloads (€0.50), Premium monthly (€4.99) or Premium yearly (€50, save 16%).
-Premium gives unlimited downloads and access to the portfolio tracker.
+Once you fill them in, everyone gets 3 free downloads, then can buy 3 downloads + the portfolio tracker (€1), Premium monthly (€4.99) or Premium yearly (€50, save 16%).
+Premium gives unlimited downloads and access to the portfolio tracker; the €1 pack also unlocks the tracker, for good.
 Gumroad is the seller of record: it takes the payment, handles EU VAT and sends the receipt. Private persons can sell; you still declare the income (ask an accountant once).
-**Check the pack price:** Gumroad's fee is about 10% + $0.50 per sale, so on a €0.50 sale almost nothing (or nothing) is left, and Gumroad may not accept a price this low.
-If it refuses €0.50, or you want to earn on the pack, raise it (for example €0.99 or €1.99) and change `PRICES.pack` in `public/js/access.js` and the texts on the Premium and Terms pages.
+**About the pack price:** Gumroad's fee is about 10% + $0.50 per sale, so on a €1 sale you keep roughly €0.45. To change it, edit `PRICES.pack` in `public/js/access.js` and the texts on the Premium and Terms pages.
 1. Create an account at https://gumroad.com and add your payout details (bank account or PayPal).
 2. Create **3 products** (Products → New product):
-   * "10 downloads": type **Digital product**, price €0.50.
+   * "3 downloads + portfolio tracker": type **Digital product**, price €1.
    * "Premium monthly": type **Membership**, €4.99, billed **monthly** only.
    * "Premium yearly": type **Membership**, €50, billed **yearly** only.
    For each: set the currency to **EUR**, and in **Content → License key** switch on **"Generate a unique license key per sale"**.

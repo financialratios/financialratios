@@ -1,4 +1,4 @@
-// Portfolio tracker (part of Premium). Everything is stored in this browser (localStorage); prices come from /api/quote.
+// Portfolio tracker (included in every paid plan). Everything is stored in this browser (localStorage); prices come from /api/quote.
 import { portfolioSummary, isNum } from './lib/finance.js';
 import { money, pct, signedPct, escapeHtml, compact } from './lib/format.js';
 import { donutChart, barChart, lineChart, palette } from './charts.js';
@@ -267,10 +267,10 @@ $('#pf-refresh').addEventListener('click', refreshPrices);
 function showLock() {
   const lock = $('#pf-lock');
   lock.hidden = false;
-  $('#pf-offers').innerHTML = offersHtml({ premiumOnly: true });
+  $('#pf-offers').innerHTML = offersHtml();
   wireOffers(lock);
   $('#pf-code-box').innerHTML = codeFormHtml('pf-code');
-  wireCodeForm(lock, 'pf-code', (st) => { if (st.unlimited) start(); });
+  wireCodeForm(lock, 'pf-code', (st) => { if (st.portfolio) start(); });
 }
 function start() {
   $('#pf-lock').hidden = true;

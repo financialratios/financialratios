@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { handlePayments, setLicenseStoreForTests, thankYouEmail, licenseStatus } from '../server/payments.mjs';
 
-const gumroad = { pack10: { url: 'https://x.gumroad.com/l/pack', productId: 'P_PACK' }, monthly: { url: 'https://x.gumroad.com/l/m', productId: 'P_MONTH' }, yearly: { url: 'https://x.gumroad.com/l/y', productId: 'P_YEAR' } };
+const gumroad = { pack3: { url: 'https://x.gumroad.com/l/pack', productId: 'P_PACK' }, monthly: { url: 'https://x.gumroad.com/l/m', productId: 'P_MONTH' }, yearly: { url: 'https://x.gumroad.com/l/y', productId: 'P_YEAR' } };
 const env = { RESEND_API_KEY: 're_x', EMAIL_FROM: 'Financial Rat <hi@example.com>', SITE_URL: 'https://example.com' };
 const PACK_KEY = 'AAAA1111-BBBB2222-CCCC3333-DDDD4444';
 const SUB_KEY = 'EEEE5555-FFFF6666-0000AAAA-1111BBBB';
@@ -26,25 +26,26 @@ const call = (route, { method = 'GET', query = '', body, fetchImpl, cfg = gumroa
 
 test('without Gumroad products, payments are off', async () => {
   setLicenseStoreForTests(memStore());
-  const [s] = await call('license', { query: `?code=${PACK_KEY}`, cfg: { pack10: { url: '', productId: '' } }, fetchImpl: fakeGumroad({}) });
+  const [s] = await call('license', { query: `?code=${PACK_KEY}`, cfg: { pack3: { url: '', productId: '' } }, fetchImpl: fakeGumroad({}) });
   assert.equal(s, 503);
 });
 
-test('a 10-download pack: key found, 10 downloads then refused', async () => {
+test('a 3-download pack: key found, 3 downloads then refused, portfolio stays unlocked', async () => {
   setLicenseStoreForTests(memStore());
   const calls = [];
   const fetchImpl = fakeGumroad({ [`P_PACK:${PACK_KEY}`]: { uses: 0, purchase: { email: 'ana@example.com', quantity: 1 } } }, [], calls);
   const [s, b] = await call('license', { query: `?code=${PACK_KEY.toLowerCase()}`, fetchImpl });
   assert.equal(s, 200);
-  assert.deepEqual([b.plan, b.credits, b.unlimited], ['pack', 10, false]);
-  for (let i = 0; i < 10; i++) {
+  assert.deepEqual([b.plan, b.credits, b.unlimited, b.portfolio], ['pack', 3, false, true]);
+  for (let i = 0; i < 3; i++) {
     const [ds, db] = await call('download', { method: 'POST', body: JSON.stringify({ code: PACK_KEY }), fetchImpl });
     assert.equal(ds, 200, `download ${i + 1}`);
-    assert.equal(db.credits, 9 - i);
+    assert.equal(db.credits, 2 - i);
   }
   const [last, lb] = await call('download', { method: 'POST', body: JSON.stringify({ code: PACK_KEY }), fetchImpl });
   assert.equal(last, 402);
   assert.equal(lb.credits, 0);
+  assert.equal(lb.portfolio, true, 'the portfolio tracker stays unlocked after the downloads are used');
   // Remembered which product the key belongs to: no extra lookups on other products later.
   calls.length = 0;
   await call('license', { query: `?code=${PACK_KEY}`, fetchImpl });
@@ -68,6 +69,7 @@ test('a membership is unlimited while active, never uses up the key, and stops w
   const [es, eb] = await call('download', { method: 'POST', body: JSON.stringify({ code: SUB_KEY }), fetchImpl });
   assert.equal(es, 402);
   assert.equal(eb.unlimited, false);
+  assert.equal(eb.portfolio, false);
 });
 
 test('unknown or malformed keys are rejected', async () => {
@@ -77,8 +79,10 @@ test('unknown or malformed keys are rejected', async () => {
   assert.equal((await call('license', { query: '?code=<script>', fetchImpl }))[0], 404);
 });
 
-test('refunded packs give no downloads', () => {
-  assert.equal(licenseStatus('pack10', { uses: 0, purchase: { refunded: true } }).credits, 0);
+test('refunded packs give no downloads and no portfolio tracker', () => {
+  const st = licenseStatus('pack3', { uses: 0, purchase: { refunded: true } });
+  assert.equal(st.credits, 0);
+  assert.equal(st.portfolio, false);
 });
 
 test('Gumroad ping: verified with Gumroad, personal email sent once, renewals skipped', async () => {
