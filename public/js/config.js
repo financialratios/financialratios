@@ -9,8 +9,8 @@ export const SITE = {
   // While these are empty, downloads and the portfolio tracker stay free and unlimited (no counter, no paywall).
   gumroad: {
     pack3: { url: 'https://ciobanui.gumroad.com/l/finrat', productId: '87iCjNAc1SGxFakj3eo2MA==' }, // one-time €1 → 3 downloads + portfolio tracker
-    monthly: { url: 'https://ciobanui.gumroad.com/l/ncgbr', productId: 'ULa-HLv8Szl34GrbsS7yhg==' }, // membership €4.99 / month → Premium
-    yearly: { url: 'https://ciobanui.gumroad.com/l/knsgd', productId: 'gOFWx1N9g_q67tbzCkDhUw==' }, // membership €50 / year → Premium
+    monthly: { url: 'https://ciobanui.gumroad.com/l/knsgd', productId: 'gOFWx1N9g_q67tbzCkDhUw==' }, // membership €4.99 / month → Premium
+    yearly: { url: 'https://ciobanui.gumroad.com/l/ncgbr', productId: 'ULa-HLv8Szl34GrbsS7yhg==' }, // membership €50 / year → Premium
   },
 
   // Google AdSense. Easiest: run `npm run set-adsense -- ca-pub-1234567890123456`
