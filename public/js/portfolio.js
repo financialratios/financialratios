@@ -1,12 +1,15 @@
-// Portfolio tracker. Everything is stored in this browser (localStorage); prices come from /api/quote.
+// Portfolio tracker (part of Premium). Everything is stored in this browser (localStorage); prices come from /api/quote.
 import { portfolioSummary, isNum } from './lib/finance.js';
 import { money, pct, signedPct, escapeHtml, compact } from './lib/format.js';
 import { donutChart, barChart, lineChart, palette } from './charts.js';
+import { paymentsOn, canUsePortfolio, offersHtml, wireOffers, codeFormHtml, wireCodeForm } from './access.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const KEY = 'fr-portfolio-v1';
 const BASES = ['USD', 'EUR', 'RON', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY'];
+// Hidden until we know the visitor has Premium, so the tracker does not flash before the lock.
+if (paymentsOn) $('#pf-app').hidden = true;
 
 // ---------- storage ----------
 function load() {
@@ -260,4 +263,18 @@ $('#pf-base').innerHTML = BASES.map((c) => `<option${c === data.base ? ' selecte
 $('#pf-base').addEventListener('change', (e) => { data.base = e.target.value; save(); refreshPrices(); });
 $('#pf-refresh').addEventListener('click', refreshPrices);
 
-refreshPrices();
+// ---------- Premium ----------
+function showLock() {
+  const lock = $('#pf-lock');
+  lock.hidden = false;
+  $('#pf-offers').innerHTML = offersHtml({ premiumOnly: true });
+  wireOffers(lock);
+  $('#pf-code-box').innerHTML = codeFormHtml('pf-code');
+  wireCodeForm(lock, 'pf-code', (st) => { if (st.unlimited) start(); });
+}
+function start() {
+  $('#pf-lock').hidden = true;
+  $('#pf-app').hidden = false;
+  refreshPrices();
+}
+canUsePortfolio().then((ok) => (ok ? start() : showLock()));

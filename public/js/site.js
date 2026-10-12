@@ -46,7 +46,7 @@ function footer() {
         <li><a href="/learn/industries.html">7 industry case studies</a></li>
       </ul></div>
       <div><h4>Calculators</h4><ul>
-        <li><a href="/calculators/portfolio.html">Portfolio tracker</a></li>
+        <li><a href="/calculators/portfolio.html">Portfolio tracker ⭐</a></li>
         <li><a href="/calculators/compound-interest.html">Compound interest</a></li>
         <li><a href="/calculators/mortgage.html">Mortgage</a></li>
         <li><a href="/calculators/investment-return.html">Investment return</a></li>
@@ -56,6 +56,7 @@ function footer() {
       <div><h4>Financial Rat</h4><ul>
         <li><a href="/analyze/">Analyze a company</a></li>
         <li><a href="/reviews.html">Reviews</a></li>
+        <li><a href="/premium.html">⭐ Premium</a></li>
         <li><a href="/about.html">About</a></li>
         <li><a href="/privacy.html">Privacy policy</a></li>
         <li><a href="/terms.html">Terms &amp; disclaimer</a></li>

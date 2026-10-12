@@ -50,6 +50,30 @@ AdSense approves sites that have original, useful content. The lessons and calcu
 4. **Required in the EU:** in AdSense open **Privacy & messaging → European regulations** and publish Google's consent message (cookie banner). No code is needed.
 5. After approval, either turn on **Auto ads**, or create 3 display ad units and paste their slot IDs into `adSlots` in `public/js/config.js` (`top`, `middle`, `bottom`).
 
+## Step 6b: Switch on the paid plans (Gumroad, about 30 minutes)
+While no Gumroad product is filled in, downloads and the portfolio tracker are **free and unlimited** (no counter, no paywall).
+Once you fill them in, everyone gets 3 free downloads, then can buy 10 downloads (€0.50), Premium monthly (€4.99) or Premium yearly (€50, save 16%).
+Premium gives unlimited downloads and access to the portfolio tracker.
+Gumroad is the seller of record: it takes the payment, handles EU VAT and sends the receipt. Private persons can sell; you still declare the income (ask an accountant once).
+**Check the pack price:** Gumroad's fee is about 10% + $0.50 per sale, so on a €0.50 sale almost nothing (or nothing) is left, and Gumroad may not accept a price this low.
+If it refuses €0.50, or you want to earn on the pack, raise it (for example €0.99 or €1.99) and change `PRICES.pack` in `public/js/access.js` and the texts on the Premium and Terms pages.
+1. Create an account at https://gumroad.com and add your payout details (bank account or PayPal).
+2. Create **3 products** (Products → New product):
+   * "10 downloads": type **Digital product**, price €0.50.
+   * "Premium monthly": type **Membership**, €4.99, billed **monthly** only.
+   * "Premium yearly": type **Membership**, €50, billed **yearly** only.
+   For each: set the currency to **EUR**, and in **Content → License key** switch on **"Generate a unique license key per sale"**.
+   Optional: add a checkout field called **Name**, so the thank-you email can start with the buyer's name.
+3. For each product copy its **link** (e.g. `https://yourname.gumroad.com/l/abcde`) and its **product ID** (shown in the License key section).
+4. Paste them into `gumroad` in `public/js/config.js` (or send them to Claude to do it). Commit; Netlify redeploys.
+5. Test: buy the pack once yourself (you can refund yourself in Gumroad), paste the license key into the paywall, and download.
+
+**Optional: personal thank-you email** ("Dear Ana, thank you for your trust… please leave a review")
+1. https://resend.com: add your domain, add the DNS records it shows at Namecheap, wait for *Verified*, create an API key.
+2. Netlify → Environment variables: `RESEND_API_KEY` = `re_…`, `EMAIL_FROM` = `Financial Rat <hello@financialrat.com>`, optionally `EMAIL_REPLY_TO` = your inbox. Trigger a deploy.
+3. Gumroad → Settings → Advanced → **Ping**: `https://financialrat.com/api/gumroad-ping`.
+Without these, buyers still get Gumroad's own receipt with their license key.
+
 ## Step 7: Help people find the site (ongoing)
 Visitors are counted by **Google Analytics** (ID `G-FCZHDR1HTV`, tag in the `<head>` of every page). Besides page views it records these events
 (Analytics → Reports → Engagement → Events): `analyze_company` (with the ticker), `download_statements` (ticker and xlsx/pdf),
@@ -61,7 +85,8 @@ After adding or renaming a page, run `npm run seo`: it updates the sharing previ
 
 ## Step 8: Later monetization
 * **Affiliates:** brokers (eToro, Interactive Brokers, XTB, Trading 212) and books. Mark affiliate links clearly. The privacy policy already mentions them.
-* **Section 4:** a portfolio tracker, a company comparison tool or a community. The home page already teases it.
+* **Premium extras:** Premium already gives unlimited downloads and the portfolio tracker (step 6b). Company comparisons, a watchlist or alerts could be added to it later.
+* **Section 4:** a company comparison tool or a community. The home page already teases it.
 
 ---
 
@@ -71,6 +96,7 @@ After adding or renaming a page, run `npm run seo`: it updates the sharing previ
 | Test live company data | The build environment blocks financial data websites, so live data was tested with sample responses in the providers' documented formats | Step 1 (local) or Step 4 (online): try several tickers and report anything odd |
 | Data provider account and key | Needs your identity and payment | Step 2 |
 | Domain, hosting account | Needs your identity and payment | Steps 3–4 |
+| Gumroad and Resend accounts | Need your identity and bank account | Step 6b |
 | AdSense approval | Only Google approves, and only for the site owner | Step 6 |
 | Legal review and business registration | Needs a professional and your details | Step 5 |
 

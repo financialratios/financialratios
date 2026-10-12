@@ -9,6 +9,7 @@ import { INCOME_ROWS, BALANCE_ROWS, CASHFLOW_ROWS, RATIO_ROWS } from './rows.js'
 import { downloadExcel, downloadPdf } from './export.js';
 import { track } from './track.js';
 import { profileFor, SUGGESTIONS } from './profiles.js';
+import { requestDownload, renderQuota, refreshLicense } from './access.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -162,6 +163,7 @@ function render(c) {
           <button data-dl="xlsx">📗 Excel file (.xlsx)<small>Income, balance sheet, cash flow + ratios · ${c.income.length} years</small></button>
           <button data-dl="pdf">📕 PDF file<small>Printable: the 3 statements · ${c.income.length} years</small></button>
         </div>
+        <div class="dl-quota small" id="dl-quota" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -359,8 +361,16 @@ function wireDownload(c) {
   const toggle = (open) => { menu.classList.toggle('hidden', !open); btn.setAttribute('aria-expanded', String(open)); };
   btn.addEventListener('click', (e) => { e.stopPropagation(); toggle(menu.classList.contains('hidden')); });
   document.addEventListener('click', (e) => { if (!e.target.closest('.dl')) toggle(false); });
+  const quota = $('#dl-quota');
+  renderQuota(quota);
+  refreshLicense().then(() => renderQuota(quota));
+  if (!wireDownload.listening) {
+    wireDownload.listening = true;
+    document.addEventListener('fr-access-changed', () => renderQuota($('#dl-quota')));
+  }
   $$('#dl-menu button').forEach((b) => b.addEventListener('click', async () => {
     toggle(false);
+    if (!(await requestDownload())) { renderQuota(quota); return; }
     const label = btn.textContent;
     btn.textContent = '⏳ Preparing file…';
     try {
@@ -369,6 +379,7 @@ function wireDownload(c) {
     }
     catch (err) { alert(`Sorry, the download failed: ${err.message}`); }
     btn.textContent = label;
+    renderQuota(quota);
   }));
 }
 
