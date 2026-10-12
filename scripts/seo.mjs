@@ -43,7 +43,9 @@ function structuredData(path, title, description, h1, modified) {
   }
   if (path.startsWith('/calculators/') && path !== '/calculators/') {
     return [{ '@context': 'https://schema.org', '@type': 'WebApplication', name: h1 || title, description, url: SITE.url + path,
-      applicationCategory: 'FinanceApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' } }];
+      applicationCategory: 'FinanceApplication', operatingSystem: 'Any',
+      // The portfolio tracker is part of Premium; every other calculator is free.
+      ...(path === '/calculators/portfolio.html' ? {} : { offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' } }) }];
   }
   return [];
 }

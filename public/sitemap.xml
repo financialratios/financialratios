@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://financialrat.com/</loc><lastmod>2026-10-04</lastmod></url>
-  <url><loc>https://financialrat.com/learn/</loc><lastmod>2026-10-07</lastmod></url>
+  <url><loc>https://financialrat.com/learn/</loc><lastmod>2026-10-12</lastmod></url>
+  <url><loc>https://financialrat.com/learn/asset-allocation.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://financialrat.com/learn/balance-sheet.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/learn/bonds.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/learn/branches-of-finance.html</loc><lastmod>2026-10-04</lastmod></url>
@@ -9,6 +10,7 @@
   <url><loc>https://financialrat.com/learn/budgeting.html</loc><lastmod>2026-10-07</lastmod></url>
   <url><loc>https://financialrat.com/learn/case-studies.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/learn/cash-flow.html</loc><lastmod>2026-10-04</lastmod></url>
+  <url><loc>https://financialrat.com/learn/cut-big-costs.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://financialrat.com/learn/dcf.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/learn/debt-and-goals.html</loc><lastmod>2026-10-07</lastmod></url>
   <url><loc>https://financialrat.com/learn/emergency-fund.html</loc><lastmod>2026-10-07</lastmod></url>
@@ -18,11 +20,14 @@
   <url><loc>https://financialrat.com/learn/income-statement.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/learn/industries.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/learn/investing-strategies.html</loc><lastmod>2026-10-07</lastmod></url>
+  <url><loc>https://financialrat.com/learn/investing-styles.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://financialrat.com/learn/money-plan.html</loc><lastmod>2026-10-07</lastmod></url>
   <url><loc>https://financialrat.com/learn/ratios.html</loc><lastmod>2026-10-04</lastmod></url>
+  <url><loc>https://financialrat.com/learn/retirement-and-fire.html</loc><lastmod>2026-10-12</lastmod></url>
+  <url><loc>https://financialrat.com/learn/sinking-funds.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://financialrat.com/learn/stocks.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/learn/valuation.html</loc><lastmod>2026-10-04</lastmod></url>
-  <url><loc>https://financialrat.com/calculators/</loc><lastmod>2026-10-04</lastmod></url>
+  <url><loc>https://financialrat.com/calculators/</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://financialrat.com/calculators/compound-interest.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/calculators/dividend.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/calculators/inflation.html</loc><lastmod>2026-10-04</lastmod></url>
@@ -30,13 +35,14 @@
   <url><loc>https://financialrat.com/calculators/loan.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/calculators/loss-recovery.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/calculators/mortgage.html</loc><lastmod>2026-10-04</lastmod></url>
-  <url><loc>https://financialrat.com/calculators/portfolio.html</loc><lastmod>2026-10-04</lastmod></url>
+  <url><loc>https://financialrat.com/calculators/portfolio.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://financialrat.com/calculators/rule-of-72.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/calculators/savings-goal.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/calculators/stock-value.html</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/analyze/</loc><lastmod>2026-10-04</lastmod></url>
   <url><loc>https://financialrat.com/about.html</loc><lastmod>2026-10-04</lastmod></url>
-  <url><loc>https://financialrat.com/privacy.html</loc><lastmod>2026-10-04</lastmod></url>
+  <url><loc>https://financialrat.com/premium.html</loc><lastmod>2026-10-12</lastmod></url>
+  <url><loc>https://financialrat.com/privacy.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://financialrat.com/reviews.html</loc><lastmod>2026-10-04</lastmod></url>
-  <url><loc>https://financialrat.com/terms.html</loc><lastmod>2026-10-04</lastmod></url>
+  <url><loc>https://financialrat.com/terms.html</loc><lastmod>2026-10-12</lastmod></url>
 </urlset>
