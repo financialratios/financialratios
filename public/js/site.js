@@ -2,7 +2,7 @@
 import { SITE } from './config.js';
 
 function logoImg(size = 42) {
-  return `<img src="/img/logo.svg" width="${size}" height="${size}" alt="" style="border-radius:12px">`;
+  return `<img src="/favicon-96x96.png" width="${size}" height="${size}" alt="" style="border-radius:10px">`;
 }
 
 export function mottoHtml(extraClass = '') {
