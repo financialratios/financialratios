@@ -89,11 +89,12 @@ export async function canUsePortfolio() {
   return hasPortfolio();
 }
 
-/** Open the Gumroad checkout for a plan in a new tab; the buyer comes back with a license key. */
+/** Open the plan's Gumroad page in a new tab; the buyer comes back with a license key.
+ * (No `wanted=true`: that adds the product to the Gumroad cart, so clicking two plans would charge both.) */
 export function startCheckout(plan) {
   const url = shop[plan]?.url;
   if (!url) { alert('Payments are not switched on yet. Please try again soon.'); return; }
-  window.open(`${url}${url.includes('?') ? '&' : '?'}wanted=true`, '_blank', 'noopener');
+  window.open(url, '_blank', 'noopener');
   document.querySelectorAll('.after-pay').forEach((el) => { el.hidden = false; });
 }
 
