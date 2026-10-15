@@ -35,13 +35,13 @@ docs/LAUNCH-PLAN.md  ← step-by-step plan to go live
 ## Company data
 
 * **Recommended:** a [Financial Modeling Prep](https://site.financialmodelingprep.com/) API key in the `FMP_API_KEY` environment variable. It provides descriptions, revenue segments (donut chart), 10 years of statements and full price history (which of these you get depends on your FMP plan).
-* **Free mode (no key, the default):** US companies get up to 10 years of statements from the SEC (EDGAR); companies elsewhere get about 4 years from Yahoo Finance, which also supplies prices, candles, descriptions and search. Revenue breakdowns for ~25 popular companies are hand-collected in `public/js/profiles.js`; product pictures and short descriptions come from Wikipedia. Set `SEC_USER_AGENT` to `"Your Name your@email.com"`, as the SEC requires.
+* **Free mode (no key, the default):** US companies get up to 10 years of statements from the SEC (EDGAR); companies elsewhere get about 4 years from Yahoo Finance, which also supplies prices, candles, descriptions and search. Revenue breakdowns (by product/segment and by region) for US-listed companies come from the latest 10-K/20-F XBRL file on the SEC; ~25 popular companies also have hand-collected ones in `public/js/profiles.js`, shown first; product pictures and short descriptions come from Wikipedia. Set `SEC_USER_AGENT` to `"Your Name your@email.com"`, as the SEC requires.
 * `DEMO` always shows a fictional sample company.
 
 ## Downloads and Premium
 Lines or years the data source does not provide are marked with `*` in the Excel and PDF downloads, and a note under each table explains why.
 
-Paid plans are sold through Gumroad. While no product is set in `gumroad` in `public/js/config.js`, downloads and the portfolio tracker are free
+Paid plans are sold through Gumroad. While no product is set in `gumroad` in `public/js/config.js`, or while `paymentsPaused` is `true` there, downloads and the portfolio tracker are free
 and unlimited. Once set, each browser gets 3 free downloads, then visitors buy 3 downloads + the portfolio tracker (€1, one-time), or Premium monthly (€4.99) or yearly
 (€50, a 16% discount on 12 × €4.99). Premium = unlimited downloads + the portfolio tracker. The Gumroad license key is the access code:
 `server/payments.mjs` checks it with Gumroad's license API (pack downloads are counted as license "uses"). An optional Gumroad ping sends a

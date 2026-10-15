@@ -479,11 +479,14 @@ function renderSegments(c) {
   const seg = { ...(c.segments || {}) };
   const prof = profileFor(c.profile.symbol);
   let curatedNote = '';
-  if (!seg.product?.items?.length && !seg.geographic?.items?.length && prof?.mix) {
-    // No live segment data: use the figures from the company's latest annual report (hand-collected).
+  const fromSec = seg.product?.source === 'SEC' || seg.geographic?.source === 'SEC';
+  if (prof?.mix && (fromSec || (!seg.product?.items?.length && !seg.geographic?.items?.length))) {
+    // Hand-collected figures from the company's latest annual report win over the automatic SEC extraction
+    // (they come with groups and notes); the SEC's breakdown by region stays available next to them.
     seg.product = { year: prof.mix.year, items: prof.mix.items.map(([name, value]) => ({ name, value: prof.mix.unit === '%' ? value : value * 1e9 })) };
     curatedNote = `<p class="small muted">Source: ${escapeHtml(c.profile.name)} annual report, ${escapeHtml(prof.mix.year)}; rounded${prof.mix.cur && prof.mix.cur !== cur ? `, in ${prof.mix.cur}` : ''}.${prof.mix.note ? ' ' + escapeHtml(prof.mix.note) : ''}</p>`;
   }
+  const secNote = fromSec && !curatedNote ? `<p class="small muted">Source: ${escapeHtml(c.profile.name)} annual report filed with the SEC (FY${escapeHtml(String((seg.product || seg.geographic).year))}), as tagged in the filing. Segment figures can be before eliminations between segments, so they may not add up exactly to total revenue.</p>` : '';
   const isPct = prof?.mix?.unit === '%' && curatedNote;
   const mixCur = curatedNote && prof.mix.cur ? prof.mix.cur : cur;
   const kinds = [['product', 'By product / segment'], ['geographic', 'By region']].filter(([k]) => seg[k]?.items?.length);
@@ -496,9 +499,11 @@ function renderSegments(c) {
   box.innerHTML = `<div class="toolbar"><h3 style="margin:0">🍩 Where the revenue comes from</h3>
     ${kinds.length > 1 ? `<div class="seg-btns" id="seg-btns">${kinds.map(([k, l], i) => `<button data-k="${k}"${i === 0 ? ' class="active"' : ''}>${l.replace('By ', '')}</button>`).join('')}</div>` : ''}</div>
     <div class="donut-wrap" style="margin-top:12px"><div class="chart-box short"><canvas id="c-donut" aria-label="Revenue sources"></canvas></div><ul class="legend-list" id="seg-legend"></ul></div>
-    <div id="seg-explain"></div>${curatedNote}
+    <div id="seg-explain"></div>${curatedNote}${secNote}
     <div id="seg-compare"></div>`;
-  const money2 = (v) => (isPct ? `${v}%` : compact(v, mixCur));
+  // Hand-collected figures only fill the product tab; the region tab keeps the live data.
+  let curatedTab = false;
+  const money2 = (v) => (curatedTab && isPct ? `${v}%` : compact(v, curatedTab ? mixCur : cur));
   if (curatedNote && prof.mix.items.some((x) => x[2]) && new Set(prof.mix.items.map((x) => x[2])).size > 1) {
     // Compare the kinds of revenue, e.g. advertising vs subscriptions vs cloud.
     const groups = {};
@@ -510,6 +515,7 @@ function renderSegments(c) {
   }
   const draw = (kind) => {
     const s = seg[kind];
+    curatedTab = !!curatedNote && kind === 'product';
     const total = s.items.reduce((a, b) => a + b.value, 0);
     let items = s.items;
     if (items.length > 7) {
@@ -517,7 +523,7 @@ function renderSegments(c) {
       items = [...items.slice(0, 6), { name: 'Other', value: rest }];
     }
     const colors = donutChart($('#c-donut'), items.map((i) => i.name), items.map((i) => i.value), { format: (v) => `${money2(v)} (${pct(v / total)})` });
-    $('#seg-legend').innerHTML = items.map((it, i) => `<li class="seg-row"><div class="seg-top"><span><span class="sw" style="background:${colors[i]}"></span> ${escapeHtml(it.name)}</span><span><b>${pct(it.value / total)}</b> <span class="muted small">${isPct ? '' : money2(it.value)}</span></span></div>
+    $('#seg-legend').innerHTML = items.map((it, i) => `<li class="seg-row"><div class="seg-top"><span><span class="sw" style="background:${colors[i]}"></span> ${escapeHtml(it.name)}</span><span><b>${pct(it.value / total)}</b> <span class="muted small">${curatedTab && isPct ? '' : money2(it.value)}</span></span></div>
       <div class="seg-bar"><i style="width:${(it.value / items[0].value) * 100}%;background:${colors[i]}"></i></div></li>`).join('');
     const top = items[0];
     $('#seg-explain').innerHTML = arrow(`In FY${s.year}, the largest source was <b>${escapeHtml(top.name)}</b> with ${pct(top.value / total)} of the revenue reported in this breakdown.

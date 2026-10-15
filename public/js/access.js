@@ -1,12 +1,12 @@
 // Paid plans: 3 free downloads per browser, then a 3-download pack or Premium.
 // Pack (one-time) = 3 more downloads + the portfolio tracker. Premium (monthly or yearly) = unlimited downloads + the portfolio tracker.
 // Purchases happen on Gumroad; the Gumroad license key is the buyer's access code, checked by the server.
-// While no Gumroad product is set up in config.js, downloads and the portfolio tracker are free and unlimited.
+// While no Gumroad product is set up in config.js (or paymentsPaused is true), downloads and the portfolio tracker are free and unlimited.
 import { escapeHtml } from './lib/format.js';
 import { SITE } from './config.js';
 
 const shop = SITE.gumroad || {};
-export const paymentsOn = Object.values(shop).some((p) => p && p.url);
+export const paymentsOn = !SITE.paymentsPaused && Object.values(shop).some((p) => p && p.url);
 
 export const FREE_LIMIT = 3;
 const K_USED = 'fr-free-downloads-used', K_CODE = 'fr-access-code';
@@ -92,7 +92,7 @@ export async function canUsePortfolio() {
 /** Open the plan's Gumroad page in a new tab; the buyer comes back with a license key.
  * (No `wanted=true`: that adds the product to the Gumroad cart, so clicking two plans would charge both.) */
 export function startCheckout(plan) {
-  const url = shop[plan]?.url;
+  const url = paymentsOn && shop[plan]?.url;
   if (!url) { alert('Payments are not switched on yet. Please try again soon.'); return; }
   window.open(url, '_blank', 'noopener');
   document.querySelectorAll('.after-pay').forEach((el) => { el.hidden = false; });

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fmpCompany, mapSegments } from '../server/providers/fmp.mjs';
-import { parseCompanyFacts } from '../server/providers/sec.mjs';
+import { parseCompanyFacts, parseSegments, parseLabels, secSegments } from '../server/providers/sec.mjs';
 import { parseChart, parseTimeseries, parseSearch, parseQuoteSummary, parseRecommendations } from '../server/providers/yahoo.mjs';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
@@ -265,4 +265,65 @@ test('API peers: hand-picked list or similar companies in the same sector', asyn
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+// A tiny XBRL instance (the `_htm.xml` of a 10-K) with revenue by product and by region.
+const ctx = (id, start, end, dims = []) => `<xbrli:context id="${id}"><xbrli:entity><xbrli:identifier scheme="http://www.sec.gov/CIK">0000000001</xbrli:identifier>${dims.length
+  ? `<xbrli:segment>${dims.map(([d, m]) => `<xbrldi:explicitMember dimension="${d}">${m}</xbrldi:explicitMember>`).join('')}</xbrli:segment>` : ''}</xbrli:entity>
+  <xbrli:period><xbrli:startDate>${start}</xbrli:startDate><xbrli:endDate>${end}</xbrli:endDate></xbrli:period></xbrli:context>`;
+const rev = (id, v, tag = 'RevenueFromContractWithCustomerExcludingAssessedTax') => `<us-gaap:${tag} contextRef="${id}" decimals="-6" unitRef="usd">${v}</us-gaap:${tag}>`;
+const P = 'srt:ProductOrServiceAxis', G = 'srt:StatementGeographicalAxis';
+const xbrl = `<?xml version="1.0"?><xbrli:xbrl>
+  ${ctx('c1', '2023-10-01', '2024-09-28')}${ctx('c0', '2022-09-25', '2023-09-30', [[P, 'ex:PhoneMember']])}
+  ${ctx('p1', '2023-10-01', '2024-09-28', [[P, 'ex:PhoneMember']])}${ctx('p2', '2023-10-01', '2024-09-28', [[P, 'ex:LaptopMember']])}
+  ${ctx('p3', '2023-10-01', '2024-09-28', [[P, 'us-gaap:ProductMember']])}${ctx('p4', '2023-10-01', '2024-09-28', [[P, 'us-gaap:ServiceMember']])}
+  ${ctx('q1', '2024-07-01', '2024-09-28', [[P, 'ex:PhoneMember']])}
+  ${ctx('g1', '2023-10-01', '2024-09-28', [[G, 'country:US']])}${ctx('g2', '2023-10-01', '2024-09-28', [[G, 'ex:RestOfWorldMember']])}
+  ${ctx('e1', '2023-10-01', '2024-09-28', [['us-gaap:StatementBusinessSegmentsAxis', 'ex:EliminationsMember']])}
+  ${ctx('s1', '2023-10-01', '2024-09-28', [['us-gaap:StatementBusinessSegmentsAxis', 'ex:HardwareMember'], ['srt:ConsolidationItemsAxis', 'us-gaap:OperatingSegmentsMember']])}
+  ${ctx('s2', '2023-10-01', '2024-09-28', [['us-gaap:StatementBusinessSegmentsAxis', 'ex:CloudMember'], ['srt:ConsolidationItemsAxis', 'us-gaap:OperatingSegmentsMember']])}
+  ${rev('c1', 1000)}${rev('c0', 500)}${rev('p1', 600)}${rev('p2', 150)}${rev('p3', 750)}${rev('p4', 250)}${rev('q1', 200)}
+  ${rev('g1', 400)}${rev('g2', 600)}${rev('e1', -30, 'Revenues')}${rev('s1', 700, 'Revenues')}${rev('s2', 330, 'Revenues')}
+</xbrli:xbrl>`;
+const labXml = `<link:linkbase><link:labelLink>
+  <link:loc xlink:type="locator" xlink:href="ex-20240928.xsd#ex_PhoneMember" xlink:label="loc_phone"/>
+  <link:label xlink:type="resource" xlink:label="lab_phone" xlink:role="http://www.xbrl.org/2003/role/label" xml:lang="en-US">exPhone [Member]</link:label>
+  <link:label xlink:type="resource" xlink:label="lab_phone" xlink:role="http://www.xbrl.org/2003/role/terseLabel" xml:lang="en-US">exPhone</link:label>
+  <link:labelArc xlink:type="arc" xlink:from="loc_phone" xlink:to="lab_phone" xlink:arcrole="http://www.xbrl.org/2003/arcrole/concept-label"/>
+  <link:loc xlink:type="locator" xlink:href="https://xbrl.fasb.org/us-gaap-2024.xsd#us-gaap_ServiceMember" xlink:label="loc_svc"/>
+  <link:label xlink:type="resource" xlink:label="lab_svc" xlink:role="http://www.xbrl.org/2003/role/label" xml:lang="en-US">Services &amp; Support [Member]</link:label>
+  <link:labelArc xlink:type="arc" xlink:from="loc_svc" xlink:to="lab_svc"/>
+</link:labelLink></link:linkbase>`;
+
+test('SEC XBRL filing: revenue by product and region for the latest year; totals, eliminations and quarters left out', () => {
+  const labels = parseLabels(labXml);
+  assert.equal(labels.get('ex:PhoneMember'), 'exPhone', 'terse label wins');
+  assert.equal(labels.get('us-gaap:ServiceMember'), 'Services & Support');
+  const s = parseSegments(xbrl, labels);
+  assert.equal(s.product.year, 2024);
+  // "Products" (= phone + laptop) is a total and is dropped; unknown labels come from the member name.
+  assert.deepEqual(s.product.items, [{ name: 'exPhone', value: 600 }, { name: 'Services & Support', value: 250 }, { name: 'Laptop', value: 150 }]);
+  assert.deepEqual(s.geographic.items.map((i) => [i.name, i.value]), [['Rest Of World', 600], ['US', 400]]);
+  // Without a product axis, operating segments are used (eliminations left out).
+  const noProduct = parseSegments(xbrl.replace(/srt:ProductOrServiceAxis/g, 'ex:OtherAxis'));
+  assert.deepEqual(noProduct.product.items.map((i) => i.name), ['Hardware', 'Cloud']);
+  assert.deepEqual(parseSegments('<xbrl/>'), { product: null, geographic: null });
+});
+
+test('SEC segments: finds the latest 10-K and its files; never throws', async () => {
+  const urls = [];
+  const fetchImpl = async (url) => {
+    urls.push(url);
+    const ok = (body) => ({ ok: true, status: 200, json: async () => body, text: async () => body });
+    if (url.endsWith('company_tickers.json')) return ok({ 0: { cik_str: 42, ticker: 'ZZSG', title: 'Seg Inc' } });
+    if (url.includes('/submissions/')) return ok({ filings: { recent: { form: ['8-K', '10-Q', '10-K', '10-K'], accessionNumber: ['a', 'b', '0000000042-24-000123', 'old'], isXBRL: [0, 1, 1, 1] } } });
+    if (url.endsWith('/index.json')) return ok({ directory: { item: [{ name: 'ex-20240928.htm' }, { name: 'ex-20240928_htm.xml' }, { name: 'ex-20240928_lab.xml' }, { name: 'ex-20240928_pre.xml' }] } });
+    if (url.endsWith('_htm.xml')) return ok(xbrl);
+    if (url.endsWith('_lab.xml')) return ok(labXml);
+    return { ok: false, status: 404, json: async () => ({}), text: async () => '' };
+  };
+  const s = await secSegments('ZZSG', 'test test@example.com', fetchImpl);
+  assert.equal(s.product.items[0].name, 'exPhone');
+  assert.ok(urls.includes('https://www.sec.gov/Archives/edgar/data/42/000000004224000123/index.json'));
+  assert.equal(await secSegments('ZZSG', 'ua', async () => { throw new Error('offline'); }), null);
 });

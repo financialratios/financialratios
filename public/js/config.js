@@ -7,6 +7,8 @@ export const SITE = {
   // Paid plans through Gumroad. For each product, paste its link (e.g. 'https://yourname.gumroad.com/l/abcde')
   // and its product ID (Gumroad → the product → Content → License key → "Use your product ID…").
   // While these are empty, downloads and the portfolio tracker stay free and unlimited (no counter, no paywall).
+  // paymentsPaused: true switches the paid plans off for a while (same as empty links) without deleting them; set it back to false to sell again.
+  paymentsPaused: true,
   gumroad: {
     pack3: { url: 'https://ciobanui.gumroad.com/l/finrat', productId: '87iCjNAc1SGxFakj3eo2MA==' }, // one-time €1 → 3 downloads + portfolio tracker
     monthly: { url: 'https://ciobanui.gumroad.com/l/knsgd', productId: 'gOFWx1N9g_q67tbzCkDhUw==' }, // membership €4.99 / month → Premium
