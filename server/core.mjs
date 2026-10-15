@@ -8,7 +8,7 @@
 // Data source: Financial Modeling Prep when FMP_API_KEY is set; otherwise free mode:
 // SEC EDGAR statements for US filers, Yahoo Finance for prices, profiles and non-US companies. The symbol DEMO always returns a fictional sample company.
 import { fmpCompany, fmpPeers, fmpPrices, fmpSearch } from './providers/fmp.mjs';
-import { secCompany, secSearch } from './providers/sec.mjs';
+import { secCompany, secSearch, secSegments } from './providers/sec.mjs';
 import { yahooChart, yahooCompany, yahooFx, yahooProfile, yahooRecommendations, yahooSearch } from './providers/yahoo.mjs';
 import { demoCompany, demoPrices } from './demo.mjs';
 import { SITE } from '../public/js/config.js';
@@ -46,6 +46,11 @@ async function getCompany(symbol, cfg) {
     company = await fmpCompany(symbol, cfg.fmpKey).catch((e) => (isUsTicker(symbol) ? Promise.reject(e) : null));
   }
   if (!company) company = await freeCompany(symbol, cfg);
+  // FMP plans without segment data: take the breakdown from the SEC filing instead.
+  if (cfg.fmpKey && isUsTicker(symbol) && !company.segments?.product && !company.segments?.geographic) {
+    const seg = await secSegments(symbol, cfg.secUA);
+    if (seg) company.segments = seg;
+  }
   return addFx(company);
 }
 

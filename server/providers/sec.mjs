@@ -1,7 +1,7 @@
 // Free fallback: US SEC EDGAR "company facts" API (https://www.sec.gov/search-filings/edgar-application-programming-interfaces).
 // No key needed, but the SEC asks every caller to send a User-Agent with a contact email
 // (set SEC_USER_AGENT) and to stay under 10 requests per second. US-listed filers only.
-// It has no revenue-segment breakdown and no business description; the site says so when that happens.
+// It has no business description; the revenue breakdown comes from the latest annual report's XBRL file.
 import { completeRows } from '../normalize.mjs';
 
 // Annual reports; IPO prospectuses (S-1/F-1) only fill years before the first annual report,
@@ -194,6 +194,162 @@ export async function secSearch(query, ua, fetchImpl = fetch) {
   return [...exact, ...starts, ...byName].slice(0, 10).map(({ symbol, name }) => ({ symbol, name, exchange: 'US' }));
 }
 
+// ---------- Revenue breakdown from the latest annual report's XBRL ----------
+// The company-facts API has no segment data, so the breakdown comes from the filing itself: revenue facts
+// tagged with a product/segment or geographic dimension, for the latest fiscal year. Labels come from the
+// filing's label file ("iPhone"), else from the member name ("IPhoneMember" -> "I Phone").
+const SEGMENT_FORMS = new Set(['10-K', '20-F', '40-F', '10-KT']);
+const PRODUCT_AXES = ['srt:ProductOrServiceAxis', 'us-gaap:StatementBusinessSegmentsAxis', 'ifrs-full:ProductsAndServicesAxis', 'ifrs-full:SegmentsAxis'];
+const GEO_AXES = ['srt:StatementGeographicalAxis', 'ifrs-full:GeographicalAreasAxis'];
+// Reconciling lines, not sources of revenue.
+const NOT_A_SOURCE = /Elimination|Intersegment|Intercompany|ReconcilingItem|Consolidat|CorporateNonSegment|CorporateAndOther|AllOtherSegments|OperatingSegmentsMember$|SegmentReconcilingItems/i;
+
+const attrs = (s) => Object.fromEntries([...s.matchAll(/([\w:.-]+)\s*=\s*"([^"]*)"/g)].map((m) => [m[1], m[2]]));
+const decode = (s) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/\s+/g, ' ').trim();
+const humanize = (qname) => qname.split(':').pop().replace(/Member$/, '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').trim();
+
+/** Concept labels from a label linkbase: Map('aapl:IPhoneMember' -> 'iPhone'). Terse labels win over standard ones. */
+export function parseLabels(xml) {
+  const locs = new Map(), labels = new Map(), arcs = [];
+  for (const m of xml.matchAll(/<(?:[\w-]+:)?loc\b([^>]*)\/?>/g)) {
+    const a = attrs(m[1]);
+    const id = (a['xlink:href'] || '').split('#')[1];
+    if (id) locs.set(a['xlink:label'], id.replace('_', ':'));
+  }
+  for (const m of xml.matchAll(/<(?:[\w-]+:)?label\b([^>]*)>([\s\S]*?)<\/(?:[\w-]+:)?label>/g)) {
+    const a = attrs(m[1]);
+    const role = (a['xlink:role'] || '').split('/').pop();
+    if (!labels.has(a['xlink:label'])) labels.set(a['xlink:label'], {});
+    labels.get(a['xlink:label'])[role] = decode(m[2].replace(/<[^>]+>/g, ''));
+  }
+  for (const m of xml.matchAll(/<(?:[\w-]+:)?labelArc\b([^>]*)\/?>/g)) arcs.push(attrs(m[1]));
+  const out = new Map();
+  for (const a of arcs) {
+    const concept = locs.get(a['xlink:from']);
+    const l = labels.get(a['xlink:to']);
+    if (!concept || !l) continue;
+    const text = (l.terseLabel || l.label || '').replace(/\s*\[(Member|Domain|Axis)\]\s*$/i, '');
+    if (text && (l.terseLabel || !out.has(concept))) out.set(concept, text);
+  }
+  return out;
+}
+
+/** Drop members that are totals of other members (e.g. "Products" = iPhone + Mac + iPad + ...). */
+function dropTotals(items) {
+  if (items.length > 16) return items;
+  const sorted = [...items].sort((a, b) => b.value - a.value);
+  const keep = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const smaller = sorted.slice(i + 1).map((x) => x.value);
+    const target = sorted[i].value;
+    let sums = new Set([0]), isTotal = false;
+    for (const v of smaller) {
+      const next = new Set(sums);
+      for (const s of sums) {
+        const t = s + v;
+        if (Math.abs(t - target) <= target * 0.002 && t !== v) { isTotal = true; break; }
+        if (t < target * 1.002) next.add(t);
+      }
+      if (isTotal) break;
+      sums = next;
+    }
+    if (!isTotal) keep.push(sorted[i]);
+  }
+  return keep;
+}
+
+/**
+ * Revenue by product/segment and by region from an XBRL instance document (the `_htm.xml` of a 10-K/20-F).
+ * Returns { product, geographic }, each { year, items: [{ name, value }] } or null.
+ */
+export function parseSegments(xml, labels = new Map()) {
+  const contexts = new Map();
+  for (const m of xml.matchAll(/<(?:[\w-]+:)?context\b([^>]*)>([\s\S]*?)<\/(?:[\w-]+:)?context>/g)) {
+    const body = m[2];
+    if (/typedMember/.test(body)) continue;
+    const start = body.match(/<(?:[\w-]+:)?startDate>\s*([\d-]+)/)?.[1];
+    const end = body.match(/<(?:[\w-]+:)?endDate>\s*([\d-]+)/)?.[1];
+    if (!start || !end) continue;
+    const len = days(start, end);
+    if (len < 340 || len > 390) continue;
+    const dims = [...body.matchAll(/<(?:[\w-]+:)?explicitMember\b([^>]*)>\s*([^<\s]+)\s*</g)].map((d) => [attrs(d[1]).dimension, d[2]])
+      // "Operating segments" (as opposed to eliminations) adds nothing when a segment is named too.
+      .filter(([dim, member]) => !(dim === 'srt:ConsolidationItemsAxis' && member === 'us-gaap:OperatingSegmentsMember'));
+    contexts.set(attrs(m[1]).id, { end, dims });
+  }
+  // Revenue facts, by tag preference: Map(tag -> [{ ctx, value }]).
+  const tags = DURATION_TAGS.revenue;
+  const facts = [];
+  for (const m of xml.matchAll(/<(us-gaap|ifrs-full):([A-Za-z]+)\b([^>]*?)>([^<]*)<\/\1:\2>/g)) {
+    const rank = tags.indexOf(m[2]);
+    if (rank < 0) continue;
+    const a = attrs(m[3]);
+    const ctx = contexts.get(a.contextRef);
+    const value = Number(m[4].trim());
+    if (!ctx || !Number.isFinite(value) || a['xsi:nil'] === 'true') continue;
+    facts.push({ rank, ctx, value });
+  }
+  if (!facts.length) return { product: null, geographic: null };
+  const end = facts.reduce((e, f) => (f.ctx.end > e ? f.ctx.end : e), '');
+  const fiscalYear = Number(end.slice(0, 4)) - (end.slice(5, 7) === '01' && Number(end.slice(8, 10)) <= 7 ? 1 : 0);
+
+  const byAxis = (axis) => {
+    const best = new Map(); // member -> fact with the preferred tag
+    for (const f of facts) {
+      if (f.ctx.end !== end || f.ctx.dims.length !== 1 || f.ctx.dims[0][0] !== axis) continue;
+      const member = f.ctx.dims[0][1];
+      const prev = best.get(member);
+      if (!prev || f.rank < prev.rank) best.set(member, f);
+    }
+    const items = [...best.entries()]
+      .filter(([member, f]) => f.value > 0 && !NOT_A_SOURCE.test(member))
+      .map(([member, f]) => ({ name: labels.get(member) || humanize(member), value: f.value }));
+    const clean = dropTotals(items).sort((a, b) => b.value - a.value);
+    return clean.length >= 2 ? { year: fiscalYear, items: clean, source: 'SEC' } : null;
+  };
+  const first = (axes) => axes.map(byAxis).find(Boolean) || null;
+  return { product: first(PRODUCT_AXES), geographic: first(GEO_AXES) };
+}
+
+async function secText(url, ua, fetchImpl) {
+  const res = await fetchImpl(url, { headers: { 'User-Agent': ua } });
+  if (!res.ok) throw new Error(`SEC answered ${res.status} for ${url}`);
+  return res.text();
+}
+
+/** The revenue breakdown from the latest annual report listed in a "submissions" document. */
+async function segmentsFromFilings(cik, subs, ua, fetchImpl) {
+  const r = subs.filings?.recent;
+  if (!r?.form) return null;
+  const i = r.form.findIndex((f, k) => SEGMENT_FORMS.has(f) && (r.isXBRL?.[k] ?? 1));
+  if (i < 0) return null;
+  const dir = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${r.accessionNumber[i].replace(/-/g, '')}`;
+  const index = await secFetch(`${dir}/index.json`, ua, fetchImpl);
+  const names = (index.directory?.item || []).map((x) => x.name);
+  const instance = names.find((n) => n.endsWith('_htm.xml'))
+    || names.find((n) => n.endsWith('.xml') && !/_(cal|def|lab|pre)\.xml$|FilingSummary|MetaLinks/i.test(n));
+  if (!instance) return null;
+  const labFile = names.find((n) => n.endsWith('_lab.xml'));
+  const [xml, lab] = await Promise.all([
+    secText(`${dir}/${instance}`, ua, fetchImpl),
+    labFile ? secText(`${dir}/${labFile}`, ua, fetchImpl).catch(() => '') : '',
+  ]);
+  const seg = parseSegments(xml, parseLabels(lab));
+  return seg.product || seg.geographic ? seg : null;
+}
+
+/** Revenue breakdown for a US-listed SEC filer, or null (never throws). */
+export async function secSegments(symbol, ua, fetchImpl = fetch) {
+  try {
+    const list = await secTickers(ua, fetchImpl);
+    const hit = list.find((x) => x.symbol === symbol.toUpperCase());
+    if (!hit) return null;
+    const cik = String(hit.cik).padStart(10, '0');
+    const subs = await secFetch(`https://data.sec.gov/submissions/CIK${cik}.json`, ua, fetchImpl);
+    return await segmentsFromFilings(cik, subs, ua, fetchImpl);
+  } catch { return null; }
+}
+
 export async function secCompany(symbol, ua, fetchImpl = fetch) {
   const list = await secTickers(ua, fetchImpl);
   const hit = list.find((r) => r.symbol === symbol.toUpperCase());
@@ -208,6 +364,7 @@ export async function secCompany(symbol, ua, fetchImpl = fetch) {
     secFetch(`https://data.sec.gov/submissions/CIK${cik}.json`, ua, fetchImpl).catch(() => ({})),
   ]);
   const parsed = parseCompanyFacts(factsJson);
+  const segments = await segmentsFromFilings(cik, subs, ua, fetchImpl).catch(() => null);
   const company = {
     source: 'SEC EDGAR',
     isDemo: false,
@@ -231,7 +388,7 @@ export async function secCompany(symbol, ua, fetchImpl = fetch) {
     income: parsed.income,
     balance: parsed.balance,
     cashflow: parsed.cashflow,
-    segments: { product: null, geographic: null },
+    segments: segments || { product: null, geographic: null },
   };
   return completeRows(company);
 }

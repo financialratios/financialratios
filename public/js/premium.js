@@ -12,8 +12,10 @@ function showStatus() {
   statusEl.innerHTML = `<b>Your plan:</b> ${isPremium() ? '⭐ Premium: unlimited downloads and the portfolio tracker' : `${quotaText()}${tracker ? ' · 💼 portfolio tracker unlocked' : ''}`}${code ? ` <span class="muted small">· license key <code>${escapeHtml(code)}</code></span>` : ''}`;
 }
 
-$('#pm-offers').innerHTML = offersHtml();
-wireOffers($('#pm-offers'));
+if (paymentsOn) {
+  $('#pm-offers').innerHTML = offersHtml();
+  wireOffers($('#pm-offers'));
+}
 
 $('#pm-code').addEventListener('submit', async (e) => {
   e.preventDefault();
